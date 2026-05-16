@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="description" content="CryptoPunk #8857 — a permanent museum passport on ENS + IPFS. Powered by artid.eth" />
+<title>CryptoPunk #8857 · ArtID Museum</title>
+
+<meta property="og:title" content="CryptoPunk #8857 · ArtID Museum" />
+<meta property="og:description" content="One of 10,000 unique collectible characters with proof of ownership stored on the Ethereum blockchain." />
+<meta property="og:type" content="website" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+<link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+
+<main class="hall" id="hall">
+
+  <div class="ambient">
+    <div class="spotlight spotlight--main"></div>
+    <div class="spotlight spotlight--left"></div>
+    <div class="spotlight spotlight--right"></div>
+    <div class="floor"></div>
+    <div class="wall-grain"></div>
+    <div class="dust"></div>
+  </div>
+
+  <div class="flash" id="flash" aria-hidden="true"></div>
+  <div class="visitors" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <a class="brand" href="https://artid.eth" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+        <path d="M3 21h18M5 21V8l7-5 7 5v13M9 21v-8h6v8" fill="none" stroke="currentColor" stroke-width="1.2"/>
+      </svg>
+      <span>ArtID</span>
+    </a>
+    <div class="hall-meta">
+      <span class="hall-meta__label">Hall</span>
+      <span class="hall-meta__value">cryptopunks-8857.artid.eth</span>
+    </div>
+  </header>
+
+  <section class="exhibit">
+    <figure class="frame" id="frame">
+      <div class="frame__matte">
+        <!-- Sample artwork: a procedurally generated SVG punk-ish portrait, base64'd so this preview has no external image dependency -->
+        <img
+          class="frame__art"
+          id="artwork"
+          src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' shape-rendering='crispEdges' width='600' height='600'%3E%3Crect width='24' height='24' fill='%23638596'/%3E%3Crect x='8' y='4' width='8' height='2' fill='%23713f1d'/%3E%3Crect x='7' y='6' width='10' height='2' fill='%23713f1d'/%3E%3Crect x='8' y='8' width='8' height='6' fill='%23ead9d9'/%3E%3Crect x='9' y='10' width='1' height='1' fill='%23000'/%3E%3Crect x='14' y='10' width='1' height='1' fill='%23000'/%3E%3Crect x='11' y='12' width='2' height='1' fill='%23000'/%3E%3Crect x='8' y='14' width='8' height='8' fill='%23222'/%3E%3Crect x='6' y='10' width='1' height='2' fill='%23ead9d9'/%3E%3Crect x='17' y='10' width='1' height='2' fill='%23ead9d9'/%3E%3C/svg%3E"
+          alt="CryptoPunk #8857"
+          loading="eager"
+        />
+      </div>
+      <figcaption class="plaque">
+        <div class="plaque__row plaque__row--title">
+          <span class="plaque__title">CryptoPunk #8857</span>
+        </div>
+        <div class="plaque__row">
+          <span class="plaque__label">Collection</span>
+          <span class="plaque__value">CryptoPunks</span>
+        </div>
+        <div class="plaque__row">
+          <span class="plaque__label">Token</span>
+          <span class="plaque__value">#8857</span>
+        </div>
+        <div class="plaque__row">
+          <span class="plaque__label">Chain</span>
+          <span class="plaque__value">Ethereum</span>
+        </div>
+      </figcaption>
+    </figure>
+  </section>
+
+  <div class="scroll-cue" aria-hidden="true">
+    <span>scroll to read</span>
+    <svg viewBox="0 0 12 24" width="12" height="24">
+      <path d="M6 2v18M2 16l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1"/>
+    </svg>
+  </div>
+</main>
+
+<section class="passport">
+  <div class="passport__inner">
+
+    <div class="passport__heading">
+      <span class="eyebrow">— Passport No. 8857 —</span>
+      <h1 class="display">CryptoPunk #8857</h1>
+      <p class="lede">One of 10,000 unique collectible characters with proof of ownership stored on the Ethereum blockchain. The CryptoPunks set the precedent for the entire NFT movement.</p>
+    </div>
+
+    <div class="block">
+      <h2 class="block__title">Attributes</h2>
+      <div class="traits" id="traits"></div>
+    </div>
+
+    <div class="block">
+      <h2 class="block__title">On-Chain Provenance</h2>
+      <dl class="ledger">
+        <div class="ledger__row">
+          <dt>Contract</dt>
+          <dd><a href="https://etherscan.io/address/0xb47e3cd837dDF8e4c57F05d70Ab865de6e193BBB" target="_blank" rel="noopener" class="mono">0xb47e3c…93BBB</a></dd>
+        </div>
+        <div class="ledger__row">
+          <dt>Token Standard</dt>
+          <dd>CryptoPunks (pre-ERC721)</dd>
+        </div>
+        <div class="ledger__row">
+          <dt>Token ID</dt>
+          <dd class="mono">8857</dd>
+        </div>
+        <div class="ledger__row">
+          <dt>Blockchain</dt>
+          <dd>Ethereum Mainnet</dd>
+        </div>
+        <div class="ledger__row">
+          <dt>Mint Date</dt>
+          <dd>June 23, 2017</dd>
+        </div>
+        <div class="ledger__row">
+          <dt>Current Holder</dt>
+          <dd class="mono">0x7a9F…d12C</dd>
+        </div>
+      </dl>
+
+      <div class="links">
+        <a class="btn-link" href="https://opensea.io/" target="_blank" rel="noopener">View on OpenSea →</a>
+        <a class="btn-link" href="https://etherscan.io/" target="_blank" rel="noopener">View on Etherscan →</a>
+        <a class="btn-link" href="https://app.ens.domains/" target="_blank" rel="noopener">ENS Manager →</a>
+      </div>
+    </div>
+
+    <div class="block">
+      <h2 class="block__title">Exhibition History</h2>
+      <ul class="timeline">
+        <li class="timeline__item">
+          <span class="timeline__year">2026</span>
+          <div>
+            <strong>Inaugurated at ArtID Museum</strong>
+            <p>This passport was minted at <span class="mono">cryptopunks-8857.artid.eth</span> and pinned permanently to IPFS.</p>
+          </div>
+        </li>
+        <li class="timeline__item timeline__item--placeholder">
+          <span class="timeline__year">—</span>
+          <div>
+            <strong>Future exhibitions</strong>
+            <p>Curators may extend this passport with verified exhibition records.</p>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+  </div>
+</section>
+
+<footer class="foot">
+  <div class="foot__inner">
+    <div>
+      <div class="foot__mark">ArtID</div>
+      <div class="foot__line">This artwork lives forever on IPFS · Powered by <a href="https://artid.eth" target="_blank" rel="noopener">artid.eth</a></div>
+    </div>
+    <div class="foot__cid">
+      <span class="foot__cid-label">IPFS</span>
+      <span class="mono">bafyb…m4xq</span>
+    </div>
+  </div>
+</footer>
+
+<div class="lightbox" id="lightbox" role="dialog" aria-hidden="true">
+  <button class="lightbox__close" id="lightboxClose" aria-label="Close">×</button>
+  <img class="lightbox__img" id="lightboxImg" alt="CryptoPunk #8857" />
+</div>
+
+<script id="traits-data" type="application/json">
+[
+  { "trait_type": "Type",       "value": "Male",       "rarity": 0.6039 },
+  { "trait_type": "Accessory",  "value": "Mohawk",     "rarity": 0.0441 },
+  { "trait_type": "Accessory",  "value": "Earring",    "rarity": 0.2459 },
+  { "trait_type": "Accessory",  "value": "Goat",       "rarity": 0.0295 },
+  { "trait_type": "Mouth",      "value": "Cigarette",  "rarity": 0.0961 },
+  { "trait_type": "Eyes",       "value": "Big Shades", "rarity": 0.0535 }
+]
+</script>
+
+<script src="./script.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,843 @@
+/* ═══════════════════════════════════════════════════════════════
+   ArtID Museum Template — style.css
+   A refined editorial gallery aesthetic.
+   Pure CSS, no frameworks. Long-form by design.
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  /* Palette: charcoal wall, deep shadow, parchment light, museum gold */
+  --wall-1:        #0e0d0c;
+  --wall-2:        #15130f;
+  --wall-3:        #1a1815;
+  --shadow:        #050505;
+  --parchment:     #ece4d2;
+  --parchment-dim: #b8aa8e;
+  --gold:          #c8a35a;
+  --gold-soft:     #d8b977;
+  --ink:           #ddd2b8;
+  --rule:          rgba(200, 163, 90, 0.18);
+
+  /* Typography */
+  --font-display: "Cormorant Garamond", "Times New Roman", serif;
+  --font-ui:      "Manrope", -apple-system, sans-serif;
+
+  /* Geometry */
+  --max:          1180px;
+  --rad-frame:    2px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-ui);
+  font-weight: 300;
+  color: var(--ink);
+  background: var(--wall-1);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+a { color: inherit; }
+.mono { font-family: "JetBrains Mono", "SF Mono", ui-monospace, monospace; font-size: 0.9em; }
+
+
+/* ════════════════════════════════════════════════════════════════
+   THE HALL — first viewport, the gallery interior
+   ════════════════════════════════════════════════════════════════ */
+
+.hall {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  width: 100%;
+  background:
+    radial-gradient(ellipse at 50% 0%, var(--wall-3) 0%, var(--wall-1) 55%, var(--shadow) 100%);
+  overflow: hidden;
+  isolation: isolate;
+  padding: 32px 24px 0;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
+
+/* ─── Ambient atmosphere layers ─── */
+
+.ambient {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* The main spotlight casts a soft cone on the centerpiece */
+.spotlight {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  mix-blend-mode: screen;
+  opacity: 0.55;
+  animation: lampFlicker 9s ease-in-out infinite;
+}
+.spotlight--main {
+  width: 70vw; height: 70vh;
+  left: 50%; top: -10%;
+  transform: translateX(-50%);
+  background: radial-gradient(closest-side,
+    rgba(255, 226, 165, 0.35),
+    rgba(255, 207, 130, 0.12) 50%,
+    transparent 75%);
+}
+.spotlight--left {
+  width: 40vw; height: 50vh;
+  left: -10%; top: 10%;
+  background: radial-gradient(closest-side,
+    rgba(180, 140, 80, 0.18),
+    transparent 70%);
+  animation-duration: 13s;
+}
+.spotlight--right {
+  width: 40vw; height: 50vh;
+  right: -10%; top: 10%;
+  background: radial-gradient(closest-side,
+    rgba(180, 140, 80, 0.18),
+    transparent 70%);
+  animation-duration: 11s;
+}
+
+@keyframes lampFlicker {
+  0%, 92%, 100% { opacity: 0.55; }
+  93%           { opacity: 0.42; }
+  94%           { opacity: 0.6; }
+  95%           { opacity: 0.5; }
+}
+
+/* Polished marble floor */
+.floor {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 28%;
+  background:
+    linear-gradient(to bottom,
+      transparent 0%,
+      rgba(0,0,0,0.35) 30%,
+      rgba(0,0,0,0.7) 100%),
+    repeating-linear-gradient(
+      90deg,
+      rgba(255,255,255,0.012) 0px,
+      rgba(255,255,255,0.012) 2px,
+      transparent 2px,
+      transparent 80px
+    );
+  border-top: 1px solid rgba(200, 163, 90, 0.08);
+}
+.floor::after {
+  /* subtle reflection band on the floor below the artwork */
+  content: "";
+  position: absolute;
+  left: 50%; top: 0;
+  width: 40%; height: 100%;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse at top, rgba(255, 220, 160, 0.06), transparent 70%);
+}
+
+/* Almost-imperceptible wall grain (SVG noise) */
+.wall-grain {
+  position: absolute; inset: 0;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.06 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  mix-blend-mode: overlay;
+  opacity: 0.5;
+}
+
+/* Slow drifting dust motes in the spotlight cone */
+.dust {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(1px 1px at 23% 40%, rgba(255,230,180,0.5), transparent 50%),
+    radial-gradient(1px 1px at 67% 22%, rgba(255,230,180,0.4), transparent 50%),
+    radial-gradient(1px 1px at 81% 55%, rgba(255,230,180,0.5), transparent 50%),
+    radial-gradient(1px 1px at 12% 70%, rgba(255,230,180,0.3), transparent 50%),
+    radial-gradient(1px 1px at 45% 12%, rgba(255,230,180,0.4), transparent 50%),
+    radial-gradient(1px 1px at 90% 80%, rgba(255,230,180,0.3), transparent 50%);
+  animation: dustDrift 22s linear infinite;
+  opacity: 0.7;
+}
+@keyframes dustDrift {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-30px); }
+}
+
+
+/* ─── Top bar ─── */
+
+.topbar {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: var(--max);
+  width: 100%;
+  margin: 0 auto;
+  padding: 8px 0 0;
+  color: var(--parchment-dim);
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--gold);
+  text-decoration: none;
+  font-family: var(--font-display);
+  font-size: 18px;
+  letter-spacing: 0.3em;
+  font-weight: 500;
+  text-transform: none;
+}
+.brand:hover { color: var(--gold-soft); }
+.hall-meta {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+}
+.hall-meta__label { color: var(--parchment-dim); }
+.hall-meta__value {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  color: var(--parchment);
+  letter-spacing: 0.05em;
+  text-transform: lowercase;
+}
+
+
+/* ════════════════════════════════════════════════════════════════
+   THE EXHIBIT — framed artwork, the centerpiece
+   ════════════════════════════════════════════════════════════════ */
+
+.exhibit {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 0 60px;
+  width: 100%;
+}
+
+.frame {
+  position: relative;
+  max-width: 620px;
+  width: 100%;
+  cursor: zoom-in;
+  animation: frameEnter 1.4s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  /* deep cast shadow on the wall + soft glow from spotlight */
+  filter:
+    drop-shadow(0 30px 60px rgba(0,0,0,0.65))
+    drop-shadow(0 8px 16px rgba(0,0,0,0.5));
+}
+@keyframes frameEnter {
+  from { opacity: 0; transform: translateY(20px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+
+/* Gilded carved frame, built from layered gradients */
+.frame__matte {
+  position: relative;
+  padding: 22px;
+  background:
+    linear-gradient(135deg,
+      #c8a35a 0%,
+      #8e6f37 25%,
+      #d8b977 50%,
+      #6e5424 75%,
+      #c8a35a 100%);
+  border-radius: var(--rad-frame);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 220, 150, 0.6),
+    inset 0 0 0 4px rgba(0, 0, 0, 0.35),
+    inset 0 0 0 5px rgba(255, 220, 150, 0.25),
+    inset 0 0 30px rgba(0, 0, 0, 0.55);
+}
+.frame__matte::before,
+.frame__matte::after {
+  /* engraved inner & outer bevel lines */
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  border: 1px solid rgba(0, 0, 0, 0.4);
+  border-radius: var(--rad-frame);
+}
+.frame__matte::before { inset: 8px;  border-color: rgba(255, 220, 150, 0.25); }
+.frame__matte::after  { inset: 14px; border-color: rgba(0, 0, 0, 0.6); }
+
+.frame__art {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  background: var(--shadow);
+  border: 1px solid rgba(0, 0, 0, 0.5);
+}
+
+/* Brass museum plaque under the frame */
+.plaque {
+  position: relative;
+  margin: 18px auto 0;
+  max-width: 80%;
+  padding: 14px 22px;
+  background: linear-gradient(180deg, #1f1c17, #161310);
+  border: 1px solid var(--rule);
+  border-top: 1px solid rgba(200, 163, 90, 0.35);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+}
+.plaque__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  padding: 4px 0;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--parchment-dim);
+  border-bottom: 1px dashed rgba(200, 163, 90, 0.08);
+}
+.plaque__row:last-child { border-bottom: 0; }
+.plaque__row--title {
+  border-bottom-color: rgba(200, 163, 90, 0.25);
+  padding-bottom: 8px;
+  margin-bottom: 4px;
+}
+.plaque__title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: var(--parchment);
+  letter-spacing: 0.04em;
+  text-transform: none;
+  font-style: italic;
+  font-weight: 400;
+}
+.plaque__label { color: var(--parchment-dim); }
+.plaque__value { color: var(--parchment); font-family: var(--font-ui); }
+
+
+/* Scroll cue */
+.scroll-cue {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--parchment-dim);
+  font-size: 10px;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  padding-bottom: 24px;
+  animation: cueBob 2.4s ease-in-out infinite;
+}
+@keyframes cueBob {
+  0%, 100% { transform: translateY(0);   opacity: 0.7; }
+  50%      { transform: translateY(6px); opacity: 1; }
+}
+
+
+/* ════════════════════════════════════════════════════════════════
+   THE VISITORS — silhouettes that walk and photograph
+   ════════════════════════════════════════════════════════════════ */
+
+.visitors {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2; /* between ambient and frame */
+}
+
+.visitor {
+  position: absolute;
+  bottom: 6%;
+  width: 70px;
+  height: 180px;
+  /* Silhouette built from layered radial+linear gradients to draw a hunched museum-goer */
+  background:
+    /* head */
+    radial-gradient(circle at 50% 8%, rgba(0,0,0,0.92) 0 18px, transparent 19px),
+    /* shoulders + body */
+    radial-gradient(ellipse 38% 8% at 50% 24%, rgba(0,0,0,0.92) 60%, transparent 62%),
+    linear-gradient(to bottom,
+      transparent 14%,
+      rgba(0,0,0,0.85) 22%,
+      rgba(0,0,0,0.85) 70%,
+      transparent 72%),
+    /* legs */
+    linear-gradient(to right,
+      transparent 38%,
+      rgba(0,0,0,0.85) 40%,
+      rgba(0,0,0,0.85) 47%,
+      transparent 49%,
+      transparent 51%,
+      rgba(0,0,0,0.85) 53%,
+      rgba(0,0,0,0.85) 60%,
+      transparent 62%);
+  background-repeat: no-repeat;
+  background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%;
+  filter: blur(0.4px);
+  opacity: 0.85;
+}
+
+/* Tiny pinpoint of light where the camera/phone is held — gets brighter on flash */
+.visitor__camera {
+  position: absolute;
+  top: 38%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 235, 180, 0.6);
+  box-shadow: 0 0 4px rgba(255, 235, 180, 0.5);
+  transform: translateX(-50%);
+  transition: all 0.05s linear;
+}
+.visitor.is-flashing .visitor__camera {
+  background: #fffce8;
+  box-shadow:
+    0 0 12px 4px rgba(255, 252, 232, 0.95),
+    0 0 36px 12px rgba(255, 240, 180, 0.6);
+}
+
+/* Distance-based scale: visitors farther away are smaller and dimmer */
+.visitor--far  { transform: scale(0.55); opacity: 0.45; filter: blur(1.2px); }
+.visitor--mid  { transform: scale(0.78); opacity: 0.65; filter: blur(0.8px); }
+.visitor--near { transform: scale(1);    opacity: 0.85; filter: blur(0.4px); }
+
+
+/* ─── Walking keyframes — visitors stroll across, pause, then keep walking ─── */
+
+@keyframes walkPathA {
+  0%   { left: -10%;  }
+  35%  { left: 30%;   }
+  45%  { left: 30%;   } /* pause to look */
+  100% { left: 110%;  }
+}
+@keyframes walkPathB {
+  0%   { left: 110%;  }
+  40%  { left: 55%;   }
+  50%  { left: 55%;   } /* pause to photograph */
+  100% { left: -10%;  }
+}
+@keyframes walkPathC {
+  0%   { left: -10%;  }
+  50%  { left: 70%;   }
+  60%  { left: 70%;   }
+  100% { left: 110%;  }
+}
+
+.visitor--a { animation: walkPathA 38s linear infinite; }
+.visitor--b { animation: walkPathB 46s linear infinite; animation-delay: -8s; }
+.visitor--c { animation: walkPathC 52s linear infinite; animation-delay: -22s; }
+.visitor--d { animation: walkPathA 60s linear infinite; animation-delay: -15s; }
+.visitor--e { animation: walkPathB 44s linear infinite; animation-delay: -30s; }
+
+
+/* Subtle leg sway via background-position-x oscillation is impractical with this
+   gradient setup, so we give each visitor a tiny vertical bob to suggest walking */
+.visitor {
+  animation-name: walkPathA, visitorBob;
+  animation-duration: inherit, 0.7s;
+  animation-iteration-count: infinite, infinite;
+  animation-timing-function: linear, ease-in-out;
+}
+@keyframes visitorBob {
+  0%, 100% { margin-bottom: 0; }
+  50%      { margin-bottom: 2px; }
+}
+
+
+/* ════════════════════════════════════════════════════════════════
+   THE FLASH — bright white overlay when a camera fires
+   ════════════════════════════════════════════════════════════════ */
+
+.flash {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at var(--flash-x, 50%) var(--flash-y, 60%),
+              rgba(255, 252, 232, 0.95) 0%,
+              rgba(255, 252, 232, 0.6) 8%,
+              rgba(255, 252, 232, 0.1) 20%,
+              transparent 35%);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 4;
+  mix-blend-mode: screen;
+}
+.flash.is-firing {
+  animation: flashFire 0.45s ease-out;
+}
+@keyframes flashFire {
+  0%   { opacity: 0; }
+  8%   { opacity: 1; }
+  15%  { opacity: 0.4; }
+  22%  { opacity: 0.85; }   /* secondary pop */
+  100% { opacity: 0; }
+}
+
+
+/* ════════════════════════════════════════════════════════════════
+   THE PASSPORT — second viewport, metadata as a curated catalog
+   ════════════════════════════════════════════════════════════════ */
+
+.passport {
+  position: relative;
+  background:
+    linear-gradient(180deg, var(--shadow) 0%, var(--wall-2) 30%, var(--wall-2) 100%);
+  padding: 120px 24px 80px;
+}
+.passport::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--rule), transparent);
+}
+
+.passport__inner {
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+.passport__heading {
+  text-align: center;
+  margin-bottom: 80px;
+}
+
+.eyebrow {
+  display: inline-block;
+  font-size: 11px;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 24px;
+}
+
+.display {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-style: italic;
+  color: var(--parchment);
+  font-size: clamp(38px, 6vw, 64px);
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  margin-bottom: 24px;
+}
+
+.lede {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 300;
+  font-size: 20px;
+  line-height: 1.6;
+  color: var(--parchment-dim);
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* Block separator: thin gold rule with center ornament */
+.block {
+  position: relative;
+  margin-bottom: 80px;
+}
+.block::before {
+  content: "❦";
+  display: block;
+  text-align: center;
+  color: var(--gold);
+  font-size: 20px;
+  margin-bottom: 28px;
+  opacity: 0.6;
+}
+
+.block__title {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 14px;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: var(--gold);
+  text-align: center;
+  margin-bottom: 36px;
+}
+
+
+/* ─── Traits ─── */
+
+.traits {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+.trait {
+  position: relative;
+  padding: 16px 18px;
+  background: rgba(255, 255, 255, 0.015);
+  border: 1px solid var(--rule);
+  transition: all 0.3s ease;
+}
+.trait:hover {
+  background: rgba(200, 163, 90, 0.04);
+  border-color: rgba(200, 163, 90, 0.4);
+  transform: translateY(-2px);
+}
+.trait__type {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 6px;
+}
+.trait__value {
+  font-family: var(--font-display);
+  font-size: 20px;
+  color: var(--parchment);
+  font-style: italic;
+}
+.trait__rarity {
+  display: block;
+  font-size: 10px;
+  color: var(--parchment-dim);
+  margin-top: 6px;
+}
+
+
+/* ─── Ledger (on-chain data) ─── */
+
+.ledger {
+  border-top: 1px solid var(--rule);
+}
+.ledger__row {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  padding: 18px 4px;
+  border-bottom: 1px solid var(--rule);
+  align-items: baseline;
+  gap: 16px;
+}
+.ledger__row dt {
+  font-size: 11px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--parchment-dim);
+}
+.ledger__row dd {
+  color: var(--parchment);
+  word-break: break-all;
+}
+.ledger__row dd a {
+  text-decoration: none;
+  border-bottom: 1px solid var(--rule);
+  transition: border-color 0.2s;
+}
+.ledger__row dd a:hover { border-bottom-color: var(--gold); }
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 32px;
+  justify-content: center;
+}
+.btn-link {
+  font-size: 12px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--gold);
+  text-decoration: none;
+  padding: 14px 24px;
+  border: 1px solid var(--rule);
+  transition: all 0.3s ease;
+}
+.btn-link:hover {
+  border-color: var(--gold);
+  background: rgba(200, 163, 90, 0.05);
+  color: var(--gold-soft);
+}
+
+
+/* ─── Timeline ─── */
+
+.timeline {
+  list-style: none;
+  position: relative;
+  padding-left: 32px;
+}
+.timeline::before {
+  content: "";
+  position: absolute;
+  left: 8px; top: 8px; bottom: 8px;
+  width: 1px;
+  background: var(--rule);
+}
+.timeline__item {
+  position: relative;
+  margin-bottom: 32px;
+  padding-left: 12px;
+}
+.timeline__item::before {
+  content: "";
+  position: absolute;
+  left: -28px; top: 6px;
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 0 3px rgba(200, 163, 90, 0.18);
+}
+.timeline__item--placeholder::before {
+  background: transparent;
+  border: 1px solid var(--rule);
+  box-shadow: none;
+}
+.timeline__year {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 6px;
+}
+.timeline__item strong {
+  display: block;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 400;
+  color: var(--parchment);
+  font-size: 20px;
+  margin-bottom: 4px;
+}
+.timeline__item p {
+  color: var(--parchment-dim);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+
+/* ════════════════════════════════════════════════════════════════
+   FOOTER
+   ════════════════════════════════════════════════════════════════ */
+
+.foot {
+  background: var(--shadow);
+  padding: 40px 24px;
+  border-top: 1px solid var(--rule);
+}
+.foot__inner {
+  max-width: var(--max);
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.foot__mark {
+  font-family: var(--font-display);
+  font-size: 24px;
+  letter-spacing: 0.4em;
+  color: var(--gold);
+  margin-bottom: 4px;
+}
+.foot__line {
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  color: var(--parchment-dim);
+}
+.foot__line a {
+  color: var(--parchment);
+  text-decoration: none;
+  border-bottom: 1px solid var(--rule);
+}
+.foot__cid {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--parchment-dim);
+}
+.foot__cid-label {
+  color: var(--gold);
+  margin-right: 8px;
+}
+
+
+/* ════════════════════════════════════════════════════════════════
+   LIGHTBOX
+   ════════════════════════════════════════════════════════════════ */
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 5, 5, 0.96);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 40px;
+  backdrop-filter: blur(8px);
+}
+.lightbox.is-open { display: flex; animation: fadeIn 0.3s ease; }
+.lightbox__img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  box-shadow: 0 30px 80px rgba(0,0,0,0.8);
+}
+.lightbox__close {
+  position: absolute;
+  top: 24px; right: 32px;
+  background: transparent;
+  border: 1px solid var(--rule);
+  color: var(--parchment);
+  width: 44px; height: 44px;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.lightbox__close:hover { border-color: var(--gold); color: var(--gold); }
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+
+/* ════════════════════════════════════════════════════════════════
+   RESPONSIVE
+   ════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  .hall { padding: 20px 16px 0; }
+  .frame { max-width: 92vw; }
+  .plaque { max-width: 100%; padding: 12px 16px; }
+  .plaque__title { font-size: 18px; }
+  .topbar { font-size: 10px; flex-direction: column; gap: 8px; align-items: flex-start; }
+  .passport { padding: 80px 20px 60px; }
+  .ledger__row { grid-template-columns: 1fr; gap: 4px; }
+  .ledger__row dt { font-size: 10px; }
+  .traits { grid-template-columns: 1fr 1fr; }
+  .visitor { width: 50px; height: 130px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+  .flash { display: none; }
+  .visitors { display: none; }
+}
