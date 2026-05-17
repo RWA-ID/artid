@@ -6,9 +6,17 @@ export const ARTID_PARENT_NODE = (process.env.NEXT_PUBLIC_ARTID_PARENT_NODE || "
 
 export const REGISTRAR_ABI = [
   {
-    name: "priceFor", type: "function", stateMutability: "view",
+    name: "donationPrice", type: "function", stateMutability: "view",
     inputs: [{ name: "_years", type: "uint64" }],
     outputs: [{ type: "uint256" }],
+  },
+  {
+    name: "parentExpiry", type: "function", stateMutability: "view",
+    inputs: [], outputs: [{ type: "uint64" }],
+  },
+  {
+    name: "totalSubnames", type: "function", stateMutability: "view",
+    inputs: [], outputs: [{ type: "uint256" }],
   },
   {
     name: "isAvailable", type: "function", stateMutability: "view",
@@ -16,33 +24,23 @@ export const REGISTRAR_ABI = [
     outputs: [{ type: "bool" }],
   },
   {
-    name: "platformFee", type: "function", stateMutability: "view",
-    inputs: [], outputs: [{ type: "uint256" }],
-  },
-  {
-    name: "pricePerYear", type: "function", stateMutability: "view",
-    inputs: [], outputs: [{ type: "uint256" }],
-  },
-  {
-    name: "SUBNODE_FUSES", type: "function", stateMutability: "view",
-    inputs: [], outputs: [{ type: "uint32" }],
-  },
-  {
-    name: "renew", type: "function", stateMutability: "payable",
-    inputs: [
-      { name: "_label", type: "string" },
-      { name: "_years", type: "uint64" },
-    ],
+    name: "donate", type: "function", stateMutability: "payable",
+    inputs: [{ name: "_years", type: "uint64" }],
     outputs: [],
   },
   {
-    name: "records", type: "function", stateMutability: "view",
+    name: "syncRange", type: "function", stateMutability: "nonpayable",
+    inputs: [{ name: "_start", type: "uint256" }, { name: "_count", type: "uint256" }],
+    outputs: [],
+  },
+  {
+    name: "subnames", type: "function", stateMutability: "view",
     inputs: [{ type: "bytes32" }],
     outputs: [
+      { name: "labelhash", type: "bytes32" },
       { name: "registrant", type: "address" },
       { name: "registeredAt", type: "uint64" },
-      { name: "expiry", type: "uint64" },
-      { name: "nftContractAndTokenId", type: "bytes32" },
+      { name: "nftRef", type: "bytes32" },
     ],
   },
   {
@@ -53,8 +51,16 @@ export const REGISTRAR_ABI = [
       { name: "owner", type: "address", indexed: true },
       { name: "nftContract", type: "address", indexed: true },
       { name: "tokenId", type: "uint256", indexed: false },
-      { name: "expiry", type: "uint64", indexed: false },
+      { name: "sharedExpiry", type: "uint64", indexed: false },
+      { name: "donated", type: "uint256", indexed: false },
+    ],
+  },
+  {
+    name: "ParentExtended", type: "event",
+    inputs: [
+      { name: "donateYears", type: "uint64", indexed: false },
       { name: "paid", type: "uint256", indexed: false },
+      { name: "newSharedExpiry", type: "uint64", indexed: false },
     ],
   },
 ] as const;
@@ -64,7 +70,7 @@ export const FORWARDER_ABI = [
     name: "register", type: "function", stateMutability: "payable",
     inputs: [
       { name: "_label", type: "string" },
-      { name: "_years", type: "uint64" },
+      { name: "_donateYears", type: "uint64" },
       { name: "_nftContract", type: "address" },
       { name: "_tokenId", type: "uint256" },
       { name: "_contenthash", type: "bytes" },
@@ -98,9 +104,17 @@ export const FORWARDER_ABI = [
     name: "totalCost", type: "function", stateMutability: "view",
     inputs: [
       { name: "_nftContract", type: "address" },
-      { name: "_years", type: "uint64" },
+      { name: "_donateYears", type: "uint64" },
     ],
     outputs: [{ type: "uint256" }],
+  },
+  {
+    name: "platformFee", type: "function", stateMutability: "view",
+    inputs: [], outputs: [{ type: "uint256" }],
+  },
+  {
+    name: "platformTreasury", type: "function", stateMutability: "view",
+    inputs: [], outputs: [{ type: "address" }],
   },
   {
     name: "maxArtistFee", type: "function", stateMutability: "view",

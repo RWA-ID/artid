@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ArtID — A private museum for every NFT</title>
+<meta name="description" content="ArtID mints an immutable ENS subdomain under artid.eth for any NFT you own — paired with a hand-crafted, IPFS-hosted museum site. Live on Ethereum mainnet." />
+
+<meta property="og:title" content="ArtID — A private museum for every NFT" />
+<meta property="og:description" content="An immutable ENS subdomain + IPFS-hosted museum site for any NFT you own. Live on Ethereum mainnet." />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://artid.eth.link" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+<style>
+  :root {
+    --bg:           #0a0908;
+    --bg-2:         #13110f;
+    --bg-3:         #16130f;
+    --parchment:    #ece4d2;
+    --parchment-dim:#b8aa8e;
+    --muted:        #8a8068;
+    --quiet:        #6a6151;
+    --whisper:      #5a5141;
+    --gold:         #c8a35a;
+    --gold-soft:    #d8b977;
+    --gold-bright:  #f0d989;
+    --rule:         rgba(200, 163, 90, 0.18);
+    --rule-strong:  rgba(200, 163, 90, 0.55);
+    --display: 'Cormorant Garamond', Georgia, serif;
+    --ui:      'Manrope', system-ui, sans-serif;
+    --mono:    'JetBrains Mono', ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--parchment); font-family: var(--ui); -webkit-font-smoothing: antialiased; }
+  a { color: inherit; text-decoration: none; }
+
+  /* ─── Layout ─── */
+  .nav {
+    position: sticky; top: 0; z-index: 50;
+    border-bottom: 1px solid rgba(200, 163, 90, 0.08);
+    background: rgba(10, 9, 8, 0.9); backdrop-filter: blur(10px);
+  }
+  .nav__inner {
+    max-width: 1200px; margin: 0 auto; padding: 20px 28px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .brand {
+    font-family: var(--display); font-style: italic;
+    font-size: 22px; color: var(--gold-soft); letter-spacing: -0.01em;
+  }
+  .nav__cta {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 20px;
+    font-size: 11px; letter-spacing: 0.3em; text-transform: uppercase;
+    border: 1px solid rgba(200, 163, 90, 0.4); color: var(--gold);
+    transition: border-color 0.3s, color 0.3s, background 0.3s;
+  }
+  .nav__cta:hover { border-color: var(--gold); color: var(--gold-soft); background: rgba(200, 163, 90, 0.04); }
+
+  section { width: 100%; }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 0 28px; }
+
+  /* ─── Hero ─── */
+  .hero {
+    position: relative; overflow: hidden;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 0%, rgba(200,163,90,0.10) 0%, transparent 60%),
+      radial-gradient(ellipse at 50% 100%, #16130f 0%, #0a0908 70%);
+    padding: 120px 0 140px;
+  }
+  .hero__grid {
+    display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 80px; align-items: center;
+  }
+  @media (max-width: 960px) { .hero__grid { grid-template-columns: 1fr; gap: 60px; } }
+
+  .eyebrow {
+    font-family: var(--display); font-style: italic;
+    font-size: 13px; letter-spacing: 0.42em; text-transform: uppercase;
+    color: var(--gold); opacity: 0.85;
+    animation: fadeUp 1s cubic-bezier(0.2,0.7,0.2,1) 0.2s both;
+  }
+  .hero h1 {
+    font-family: var(--display); font-weight: 400;
+    font-size: clamp(56px, 8.6vw, 124px); line-height: 0.96; letter-spacing: -0.025em;
+    color: var(--parchment); margin-top: 28px;
+    animation: fadeUp 1.4s cubic-bezier(0.2,0.7,0.2,1) 0.4s both;
+  }
+  .hero h1 em { font-style: italic; font-weight: 300; color: var(--gold-soft); }
+  .hero__lede {
+    margin-top: 40px; max-width: 540px;
+    font-size: 17px; line-height: 1.7; color: var(--parchment-dim);
+    animation: fadeUp 1.2s cubic-bezier(0.2,0.7,0.2,1) 0.8s both;
+  }
+  .hero__lede em { font-style: italic; color: var(--gold-soft); }
+  .hero__ctas {
+    margin-top: 48px; display: flex; flex-wrap: wrap; gap: 14px;
+    animation: fadeUp 1.2s cubic-bezier(0.2,0.7,0.2,1) 1.1s both;
+  }
+  .btn {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 16px 30px;
+    font-size: 11px; letter-spacing: 0.3em; text-transform: uppercase;
+    transition: all 0.3s;
+  }
+  .btn--primary {
+    background: var(--gold); color: var(--bg);
+    box-shadow: 0 8px 24px rgba(200, 163, 90, 0.18);
+  }
+  .btn--primary:hover { background: var(--gold-soft); }
+  .btn--ghost {
+    border: 1px solid rgba(200, 163, 90, 0.18); color: var(--gold);
+  }
+  .btn--ghost:hover { border-color: var(--gold); background: rgba(200, 163, 90, 0.04); color: var(--gold-soft); }
+  .hero__chips {
+    margin-top: 64px; display: flex; flex-wrap: wrap; align-items: center; gap: 20px;
+    font-size: 10px; letter-spacing: 0.32em; text-transform: uppercase; color: var(--whisper);
+    animation: fadeUp 1.4s cubic-bezier(0.2,0.7,0.2,1) 1.4s both;
+  }
+  .hero__chips .sep { width: 1px; height: 12px; background: #3a342c; }
+
+  /* Floating gallery wall */
+  .wall { position: relative; height: 520px; display: block; }
+  @media (max-width: 960px) { .wall { display: none; } }
+  .wall__frame {
+    position: absolute;
+    background: var(--bg-3);
+    box-shadow:
+      inset 0 0 0 1px rgba(200, 163, 90, 0.45),
+      0 24px 60px rgba(0, 0, 0, 0.5),
+      0 0 80px rgba(200, 163, 90, 0.15);
+    overflow: hidden;
+    transition: transform 0.6s cubic-bezier(0.2, 0.7, 0.2, 1), box-shadow 0.6s;
+    animation: drift 9s ease-in-out infinite alternate;
+  }
+  .wall__frame::after {
+    content: ""; position: absolute; inset: 0;
+    box-shadow: inset 0 0 0 1px rgba(200, 163, 90, 0.3);
+    pointer-events: none;
+  }
+  .wall__frame img { width: 100%; height: 100%; object-fit: cover; opacity: 0.92; }
+  .wall__frame:nth-child(1) { left: 0;    top: 30px;  width: 200px; height: 280px; animation-delay: 0s; }
+  .wall__frame:nth-child(2) { left: 230px; top: 0;    width: 180px; height: 230px; animation-delay: -2s; }
+  .wall__frame:nth-child(3) { left: 50px;  top: 340px; width: 160px; height: 160px; animation-delay: -4s; }
+  .wall__frame:nth-child(4) { left: 240px; top: 260px; width: 200px; height: 240px; animation-delay: -6s; }
+  @keyframes drift { from { transform: translateY(0); } to { transform: translateY(-10px); } }
+  .wall__floor { position: absolute; left: 0; right: 0; bottom: -40px; height: 96px;
+    background: linear-gradient(to bottom, rgba(200,163,90,0.05), transparent); filter: blur(24px); }
+
+  /* ─── Manifesto ─── */
+  .manifesto {
+    border-top: 1px solid #1f1c18; border-bottom: 1px solid #1f1c18;
+    background: rgba(19, 17, 15, 0.4);
+    padding: 96px 0; text-align: center;
+  }
+  .manifesto blockquote {
+    max-width: 880px; margin: 0 auto;
+    font-family: var(--display); font-style: italic; font-weight: 300;
+    font-size: clamp(28px, 3.6vw, 44px); line-height: 1.25; color: #d6cab1;
+    letter-spacing: -0.005em;
+  }
+  .manifesto__byline {
+    margin-top: 28px;
+    font-size: 11px; letter-spacing: 0.32em; text-transform: uppercase;
+    color: rgba(200, 163, 90, 0.6);
+  }
+
+  /* ─── Process ─── */
+  .process { padding: 112px 0; }
+  .process__heading { text-align: center; margin-bottom: 64px; }
+  .process__heading p {
+    font-size: 11px; letter-spacing: 0.32em; text-transform: uppercase;
+    color: rgba(200, 163, 90, 0.7);
+  }
+  .process__heading h2 {
+    font-family: var(--display); font-weight: 400;
+    font-size: clamp(40px, 5vw, 56px); margin-top: 16px;
+    background: linear-gradient(180deg, var(--gold-bright) 0%, var(--gold-soft) 45%, var(--gold) 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .process__grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px;
+  }
+  @media (max-width: 960px) { .process__grid { grid-template-columns: 1fr; } }
+  .process__card {
+    position: relative;
+    border: 1px solid var(--rule); padding: 36px 32px;
+    background: var(--bg-2);
+  }
+  .process__num {
+    position: absolute; top: -16px; left: 28px; padding: 0 12px;
+    background: var(--bg);
+    font-family: var(--display); font-style: italic;
+    font-size: 28px; color: var(--gold-soft);
+  }
+  .process__card h3 { font-family: var(--display); font-size: 26px; margin-top: 4px; color: var(--parchment); }
+  .process__card p { margin-top: 16px; font-size: 15px; line-height: 1.7; color: var(--muted); }
+
+  /* ─── Two audiences ─── */
+  .audiences { padding: 80px 0; }
+  .audiences__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; }
+  @media (max-width: 960px) { .audiences__grid { grid-template-columns: 1fr; } }
+  .audience {
+    border: 1px solid #2a2520; padding: 40px;
+    background: rgba(19, 17, 15, 0.5);
+  }
+  .audience__eyebrow {
+    font-size: 11px; letter-spacing: 0.32em; text-transform: uppercase;
+    color: rgba(200, 163, 90, 0.7);
+  }
+  .audience h3 {
+    font-family: var(--display); font-weight: 400;
+    font-size: clamp(32px, 3.5vw, 40px); line-height: 1.05; margin-top: 12px;
+    color: var(--parchment);
+  }
+  .audience p { margin-top: 20px; line-height: 1.7; color: var(--muted); font-size: 15px; }
+  .audience__cta {
+    display: inline-block; margin-top: 28px;
+    font-size: 12px; letter-spacing: 0.18em;
+    color: var(--gold-soft); border-bottom: 1px solid rgba(200, 163, 90, 0.3); padding-bottom: 2px;
+  }
+  .audience__cta:hover { color: var(--gold-bright); border-bottom-color: var(--gold); }
+
+  /* ─── Contracts ─── */
+  .contracts { padding: 96px 0; border-top: 1px solid #1f1c18; }
+  .contracts__heading { text-align: center; margin-bottom: 56px; }
+  .contracts__heading p { font-size: 11px; letter-spacing: 0.32em; text-transform: uppercase; color: rgba(200, 163, 90, 0.7); }
+  .contracts__heading h2 { font-family: var(--display); font-weight: 400; font-size: clamp(40px, 5vw, 56px); margin-top: 16px; color: var(--parchment); }
+  .contracts__list {
+    max-width: 880px; margin: 0 auto;
+    display: grid; gap: 16px;
+  }
+  .contracts__row {
+    display: grid; grid-template-columns: 220px 1fr auto; align-items: center; gap: 16px;
+    padding: 18px 24px; border: 1px solid var(--rule); background: var(--bg-2);
+  }
+  @media (max-width: 720px) { .contracts__row { grid-template-columns: 1fr; gap: 8px; } }
+  .contracts__label { font-size: 11px; letter-spacing: 0.32em; text-transform: uppercase; color: var(--muted); }
+  .contracts__addr { font-family: var(--mono); font-size: 12px; color: var(--parchment); word-break: break-all; }
+  .contracts__link { font-size: 10px; letter-spacing: 0.32em; text-transform: uppercase; color: var(--gold); padding: 8px 14px; border: 1px solid var(--rule); }
+  .contracts__link:hover { border-color: var(--gold); color: var(--gold-soft); }
+
+  /* ─── Footer ─── */
+  footer { border-top: 1px solid #1f1c18; padding: 48px 0; text-align: center; }
+  footer p { font-size: 10px; letter-spacing: 0.32em; text-transform: uppercase; color: var(--whisper); }
+
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav__inner">
+    <a href="/" class="brand">ArtID</a>
+    <a href="https://x.com/ensgianteth" target="_blank" rel="noopener" class="nav__cta">
+      Follow on X
+      <svg viewBox="0 0 14 14" width="11" height="11"><path d="M3 11L11 3M5 3h6v6" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
+    </a>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="wrap hero__grid">
+    <div>
+      <p class="eyebrow">— A Private Museum for Every Masterpiece —</p>
+      <h1>Every NFT<br/>deserves its own<br/><em>private museum.</em></h1>
+      <p class="hero__lede">
+        ArtID mints an immutable ENS subdomain under <em>artid.eth</em> for any NFT you own —
+        paired with a hand-crafted, IPFS-hosted gallery site. Charcoal walls, gilded frames,
+        hushed footsteps. Provenance you can visit.
+      </p>
+      <div class="hero__ctas">
+        <a href="https://github.com/RWA-ID/artid" target="_blank" rel="noopener" class="btn btn--primary">
+          The Source
+          <svg viewBox="0 0 14 14" width="11" height="11"><path d="M3 7h8M7 3l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
+        </a>
+        <a href="https://x.com/ensgianteth" target="_blank" rel="noopener" class="btn btn--ghost">
+          Notify Me at Launch
+        </a>
+      </div>
+      <div class="hero__chips">
+        <span>Ethereum mainnet</span>
+        <span class="sep"></span>
+        <span>ENS · IPFS · No middlemen</span>
+        <span class="sep"></span>
+        <span>Permanent provenance</span>
+      </div>
+    </div>
+
+    <div class="wall" aria-hidden="true">
+      <div class="wall__frame"><img src="https://i.seadn.io/s/raw/files/0a4cda8836d1c66ddf64f3acdc18cc28.png?w=400" alt="" loading="lazy" /></div>
+      <div class="wall__frame"><img src="https://i.seadn.io/gae/Ju9CkWtV-1Okvf45wo8UctR-M9He2PjILP0oOvxE89AyiPPGtrR3gysu1Zgy0hjd2xKIgjJJtWIc0ybj4Vd7wv8t3pxDGHoJBzDB?w=400" alt="" loading="lazy" /></div>
+      <div class="wall__frame"><img src="https://i.seadn.io/gae/yIm-M5-BpSDdTEIJRt5D6xphizhIdozXjqSITgK4phWq7MmAU3qE7Nw7POGCiPGyhtJ3ZFP8iJ29TFl-RLcGBWX5qI4-ZcnCPcsY4zI?w=400" alt="" loading="lazy" /></div>
+      <div class="wall__frame"><img src="https://i.seadn.io/gcs/files/4ef4a60496c335d66eef82c40c4f73c8.png?w=400" alt="" loading="lazy" /></div>
+      <div class="wall__floor"></div>
+    </div>
+  </div>
+</section>
+
+<section class="manifesto">
+  <div class="wrap">
+    <blockquote>
+      "An NFT is not a website. A wallet is not a museum.<br/>
+      A passport without a country is a token, not a record."
+    </blockquote>
+    <p class="manifesto__byline">— the case for a real address on chain</p>
+  </div>
+</section>
+
+<section class="process">
+  <div class="wrap">
+    <div class="process__heading">
+      <p>Three rooms, one ceremony</p>
+      <h2>How a passport is made</h2>
+    </div>
+    <div class="process__grid">
+      <div class="process__card">
+        <div class="process__num">I</div>
+        <h3>Choose the work</h3>
+        <p>Connect your wallet. We pull every NFT you own from OpenSea — Ethereum mainnet, all collections. Pick the piece that deserves its own room.</p>
+      </div>
+      <div class="process__card">
+        <div class="process__num">II</div>
+        <h3>Mint the passport</h3>
+        <p>We auto-name your subdomain from the collection slug, build the museum HTML, pin it to IPFS, and point the ENS record at it — in one transaction.</p>
+      </div>
+      <div class="process__card">
+        <div class="process__num">III</div>
+        <h3>Keep it forever</h3>
+        <p>Your subname is a wrapped ENS NFT in your wallet — fully transferable, with PARENT_CANNOT_CONTROL burned. The gallery is yours, not ours.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="audiences">
+  <div class="wrap audiences__grid">
+    <div class="audience">
+      <p class="audience__eyebrow">For collectors</p>
+      <h3>Honor what you own.</h3>
+      <p>Most NFTs live in dashboards built for traders. ArtID gives the work a real address, a real room, and a real record — visitable from any browser, indexed by ENS, hosted by IPFS, owned by you.</p>
+      <a href="https://x.com/ensgianteth" target="_blank" rel="noopener" class="audience__cta">Be first at launch →</a>
+    </div>
+    <div class="audience">
+      <p class="audience__eyebrow">For artists & collections</p>
+      <h3>Earn on every passport.</h3>
+      <p>Register your collection's payout terms on-chain in a single tx. The forwarder routes a share of every mint to your treasury — automatically, with no platform signer to trust. Update or revoke at any time.</p>
+      <a href="https://x.com/ensgianteth" target="_blank" rel="noopener" class="audience__cta">Get in touch →</a>
+    </div>
+  </div>
+</section>
+
+<section class="contracts" id="contracts">
+  <div class="wrap">
+    <div class="contracts__heading">
+      <p>Verified on Etherscan</p>
+      <h2>Live on Ethereum mainnet</h2>
+    </div>
+    <div class="contracts__list">
+      <div class="contracts__row">
+        <span class="contracts__label">ArtIDRegistrar</span>
+        <span class="contracts__addr">0x7F45Ded4DbDf82f41f2753EB2046df90147A639D</span>
+        <a class="contracts__link" href="https://etherscan.io/address/0x7F45Ded4DbDf82f41f2753EB2046df90147A639D#code" target="_blank" rel="noopener">View</a>
+      </div>
+      <div class="contracts__row">
+        <span class="contracts__label">ArtIDForwarder</span>
+        <span class="contracts__addr" id="forwarderAddr">— see github —</span>
+        <a class="contracts__link" href="https://github.com/RWA-ID/artid" target="_blank" rel="noopener">View</a>
+      </div>
+      <div class="contracts__row">
+        <span class="contracts__label">artid.eth (parent)</span>
+        <span class="contracts__addr">0x7792657109490b637ca89e1920079e37bed31d55838ae7641747ecc9474fcd3b</span>
+        <a class="contracts__link" href="https://app.ens.domains/artid.eth" target="_blank" rel="noopener">ENS</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>artid.eth · Ethereum mainnet · 2026</p>
+</footer>
+
+</body>
+</html>

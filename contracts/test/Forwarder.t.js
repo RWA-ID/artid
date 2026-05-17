@@ -2,435 +2,298 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
 const PARENT_NODE = ethers.namehash("artid.eth");
-const PLATFORM_FEE = ethers.parseEther("0.0075");
-const PRICE_PER_YEAR = ethers.parseEther("0.008");
+const PARENT_LABEL = "artid";
 const DUMMY_CID = "0xe301017012209abc";
+const SECONDS_PER_YEAR = 365n * 24n * 60n * 60n;
 const PCC = 1 << 16;
 const CANNOT_UNWRAP = 1;
 const CAN_EXTEND_EXPIRY = 1 << 18;
 const EXPECTED_FUSES = PCC | CANNOT_UNWRAP | CAN_EXTEND_EXPIRY;
 
-async function deployAll() {
-  const [deployer, treasury, user, artist, otherArtist, other] = await ethers.getSigners();
+// Mock ENS rate: ~0.002295 ETH/year ≈ $5 → ~73 wei/sec * year ≈ 0.002295 ETH
+// Use 72744000 wei/sec → 1y = 72744000 * 31536000 ≈ 0.002294 ETH
+const PRICE_PER_SECOND = 72744000n;
+
+async function deployAll(initialParentExpiry) {
+  const [deployer, user, artist, other] = await ethers.getSigners();
 
   const NameWrapper = await ethers.getContractFactory("MockNameWrapper");
   const nameWrapper = await NameWrapper.deploy();
+  // Seed the parent expiry
+  const now = BigInt((await ethers.provider.getBlock("latest")).timestamp);
+  const startExpiry = initialParentExpiry ?? (now + SECONDS_PER_YEAR * 2n);
+  await nameWrapper.setParentExpiry(PARENT_NODE, startExpiry);
 
   const Resolver = await ethers.getContractFactory("MockPublicResolver");
   const resolver = await Resolver.deploy();
 
+  const Controller = await ethers.getContractFactory("MockController");
+  const controller = await Controller.deploy(await nameWrapper.getAddress(), PARENT_NODE, PRICE_PER_SECOND);
+
   const Registrar = await ethers.getContractFactory("ArtIDRegistrar");
   const registrar = await Registrar.deploy(
-    PARENT_NODE,
+    PARENT_NODE, PARENT_LABEL,
     await nameWrapper.getAddress(),
     await resolver.getAddress(),
-    treasury.address,
-    PLATFORM_FEE,
-    PRICE_PER_YEAR,
+    await controller.getAddress(),
     deployer.address
   );
 
   const Forwarder = await ethers.getContractFactory("ArtIDForwarder");
-  const forwarder = await Forwarder.deploy(await registrar.getAddress(), deployer.address);
+  const forwarder = await Forwarder.deploy(await registrar.getAddress(), deployer.address, 0, deployer.address);
 
   await registrar.connect(deployer).setForwarder(await forwarder.getAddress(), true);
 
   const Ownable = await ethers.getContractFactory("MockOwnableCollection");
-  const ownableNft = await Ownable.deploy(artist.address);
+  const nft = await Ownable.deploy(artist.address);
 
-  const AccessControl = await ethers.getContractFactory("MockAccessControlCollection");
-  const acNft = await AccessControl.deploy(artist.address);
-
-  const Opaque = await ethers.getContractFactory("MockOpaqueCollection");
-  const opaqueNft = await Opaque.deploy();
-
-  const Rejecting = await ethers.getContractFactory("RejectingRecipient");
-  const rejecting = await Rejecting.deploy();
-
-  return {
-    deployer, treasury, user, artist, otherArtist, other,
-    nameWrapper, resolver, registrar, forwarder,
-    ownableNft, acNft, opaqueNft, rejecting,
-  };
+  return { deployer, user, artist, other, nameWrapper, resolver, controller, registrar, forwarder, nft, startExpiry };
 }
 
-describe("ArtID — on-chain artist registry, locked subnames", function () {
+describe("ArtID v3 — donation model", function () {
   describe("Deployment", function () {
-    it("initializes with expected state", async function () {
-      const { registrar, forwarder, treasury } = await deployAll();
+    it("sets immutables + constants", async function () {
+      const { registrar, forwarder, controller, nameWrapper, resolver } = await deployAll();
       expect(await registrar.PARENT_NODE()).to.equal(PARENT_NODE);
-      expect(await registrar.platformFee()).to.equal(PLATFORM_FEE);
-      expect(await registrar.pricePerYear()).to.equal(PRICE_PER_YEAR);
-      expect(await registrar.treasury()).to.equal(treasury.address);
-      expect(await registrar.authorizedForwarders(await forwarder.getAddress())).to.equal(true);
+      expect(await registrar.PARENT_LABEL()).to.equal(PARENT_LABEL);
+      expect(await registrar.NAME_WRAPPER()).to.equal(await nameWrapper.getAddress());
+      expect(await registrar.PUBLIC_RESOLVER()).to.equal(await resolver.getAddress());
+      expect(await registrar.CONTROLLER()).to.equal(await controller.getAddress());
       expect(await registrar.SUBNODE_FUSES()).to.equal(EXPECTED_FUSES);
-      expect(await forwarder.maxArtistFee()).to.equal(ethers.parseEther("0.05"));
+      expect(await registrar.authorizedForwarders(await forwarder.getAddress())).to.equal(true);
+    });
+
+    it("donationPrice(0) is 0; donationPrice(N) reads controller", async function () {
+      const { registrar } = await deployAll();
+      expect(await registrar.donationPrice(0)).to.equal(0);
+      const p1 = PRICE_PER_SECOND * SECONDS_PER_YEAR;
+      expect(await registrar.donationPrice(1)).to.equal(p1);
+      expect(await registrar.donationPrice(5)).to.equal(p1 * 5n);
     });
   });
 
-  describe("Registration without artist terms", function () {
-    it("mints to user, treasury collects full price, fuses are burned on subname", async function () {
-      const { forwarder, registrar, treasury, user, nameWrapper, ownableNft } = await deployAll();
-      const price = await registrar.priceFor(1);
-      const before = await ethers.provider.getBalance(treasury.address);
-
-      await expect(
-        forwarder.connect(user).register(
-          "bayc-1", 1, await ownableNft.getAddress(), 1, DUMMY_CID, { value: price }
-        )
-      ).to.emit(registrar, "Registered");
-
-      expect(await ethers.provider.getBalance(treasury.address) - before).to.equal(price);
+  describe("Register without donation (years = 0)", function () {
+    it("mints subname at parent expiry, sends no ETH to controller", async function () {
+      const { forwarder, registrar, nameWrapper, controller, user, nft, startExpiry } = await deployAll();
+      const ctrlBalBefore = await ethers.provider.getBalance(await controller.getAddress());
+      const tx = await forwarder.connect(user).register(
+        "free-mint", 0, await nft.getAddress(), 1, DUMMY_CID, { value: 0 }
+      );
+      await tx.wait();
+      expect(await ethers.provider.getBalance(await controller.getAddress())).to.equal(ctrlBalBefore);
 
       const node = ethers.solidityPackedKeccak256(
         ["bytes32", "bytes32"],
-        [PARENT_NODE, ethers.keccak256(ethers.toUtf8Bytes("bayc-1"))]
+        [PARENT_NODE, ethers.keccak256(ethers.toUtf8Bytes("free-mint"))]
       );
       expect(await nameWrapper.owners(node)).to.equal(user.address);
       expect(await nameWrapper.fuses(node)).to.equal(EXPECTED_FUSES);
+      expect(await nameWrapper.expiries(node)).to.equal(startExpiry);
     });
 
-    it("calls setSubnodeRecord(registrar) then setSubnodeOwner(user) in order", async function () {
-      const { forwarder, registrar, user, nameWrapper, ownableNft } = await deployAll();
-      const price = await registrar.priceFor(1);
+    it("parent expiry does not change when years = 0", async function () {
+      const { forwarder, nameWrapper, user, nft, startExpiry } = await deployAll();
+      await forwarder.connect(user).register("nodonate", 0, await nft.getAddress(), 1, DUMMY_CID, { value: 0 });
+      expect(await nameWrapper.expiries(PARENT_NODE)).to.equal(startExpiry);
+    });
+  });
+
+  describe("Register with donation (years > 0)", function () {
+    it("forwards correct ETH to controller, extends parent by N*365d", async function () {
+      const { forwarder, registrar, nameWrapper, controller, user, nft, startExpiry } = await deployAll();
+      const required = await registrar.donationPrice(2);
       const tx = await forwarder.connect(user).register(
-        "bayc-2", 1, await ownableNft.getAddress(), 2, DUMMY_CID, { value: price }
+        "donor", 2, await nft.getAddress(), 1, DUMMY_CID, { value: required }
       );
-      const rcpt = await tx.wait();
-      const wrapperAddr = (await nameWrapper.getAddress()).toLowerCase();
-      const parsed = rcpt.logs
-        .filter(l => l.address.toLowerCase() === wrapperAddr)
-        .map(l => nameWrapper.interface.parseLog(l))
-        .filter(Boolean);
-      expect(parsed[0].name).to.equal("SubnodeRecord");
-      expect(parsed[0].args.owner).to.equal(await registrar.getAddress());
-      expect(parsed[1].name).to.equal("SubnodeOwner");
-      expect(parsed[1].args.owner).to.equal(user.address);
-      expect(parsed[1].args.fuses).to.equal(EXPECTED_FUSES);
+      await tx.wait();
+      expect(await ethers.provider.getBalance(await controller.getAddress())).to.equal(required);
+      expect(await nameWrapper.expiries(PARENT_NODE)).to.equal(startExpiry + SECONDS_PER_YEAR * 2n);
     });
 
-    it("refunds overpayment", async function () {
-      const { forwarder, registrar, user, ownableNft } = await deployAll();
-      const price = await registrar.priceFor(1);
-      const overpay = ethers.parseEther("1");
-      const before = await ethers.provider.getBalance(user.address);
-      const tx = await forwarder.connect(user).register(
-        "refundme", 1, await ownableNft.getAddress(), 3, DUMMY_CID, { value: price + overpay }
+    it("new subname inherits new parent expiry", async function () {
+      const { forwarder, registrar, nameWrapper, user, nft, startExpiry } = await deployAll();
+      const req = await registrar.donationPrice(3);
+      await forwarder.connect(user).register("dn3", 3, await nft.getAddress(), 1, DUMMY_CID, { value: req });
+      const node = ethers.solidityPackedKeccak256(
+        ["bytes32","bytes32"],
+        [PARENT_NODE, ethers.keccak256(ethers.toUtf8Bytes("dn3"))]
       );
-      const rcpt = await tx.wait();
-      const gas = rcpt.gasUsed * rcpt.gasPrice;
-      const after = await ethers.provider.getBalance(user.address);
-      expect(before - after).to.equal(price + gas);
+      expect(await nameWrapper.expiries(node)).to.equal(startExpiry + SECONDS_PER_YEAR * 3n);
+    });
+
+    it("rejects donation > MAX_DONATE_YEARS (10)", async function () {
+      const { forwarder, registrar, user, nft } = await deployAll();
+      const req = await registrar.donationPrice(11); // pay for 11y so we get past the value check
+      await expect(
+        forwarder.connect(user).register("too-many", 11, await nft.getAddress(), 1, DUMMY_CID, { value: req })
+      ).to.be.revertedWithCustomError(registrar, "YearsOutOfRange");
     });
 
     it("reverts InsufficientPayment when underpaid", async function () {
-      const { forwarder, registrar, user, ownableNft } = await deployAll();
-      const price = await registrar.priceFor(1);
+      const { forwarder, registrar, user, nft } = await deployAll();
+      const req = await registrar.donationPrice(1);
       await expect(
-        forwarder.connect(user).register("short", 1, await ownableNft.getAddress(), 4, DUMMY_CID, { value: price - 1n })
-      ).to.be.revertedWithCustomError(forwarder, "InsufficientPayment")
-       .withArgs(price, price - 1n);
+        forwarder.connect(user).register("under", 1, await nft.getAddress(), 1, DUMMY_CID, { value: req - 1n })
+      ).to.be.revertedWithCustomError(forwarder, "InsufficientPayment");
+    });
+
+    it("refunds overpayment to msg.sender", async function () {
+      const { forwarder, registrar, user, nft } = await deployAll();
+      const req = await registrar.donationPrice(1);
+      const overpay = ethers.parseEther("0.1");
+      const before = await ethers.provider.getBalance(user.address);
+      const tx = await forwarder.connect(user).register("refund", 1, await nft.getAddress(), 1, DUMMY_CID, { value: req + overpay });
+      const rcpt = await tx.wait();
+      const gas = rcpt.gasUsed * rcpt.gasPrice;
+      expect(before - await ethers.provider.getBalance(user.address)).to.equal(req + gas);
     });
   });
 
-  describe("Artist onboarding", function () {
-    it("Ownable collection owner can set terms", async function () {
-      const { forwarder, artist, ownableNft } = await deployAll();
-      const fee = ethers.parseEther("0.0025");
-      await expect(
-        forwarder.connect(artist).setArtistTerms(await ownableNft.getAddress(), artist.address, fee)
-      ).to.emit(forwarder, "ArtistTermsSet");
-      const [treasury, storedFee, active] = await forwarder.getArtistTerms(await ownableNft.getAddress());
-      expect(treasury).to.equal(artist.address);
-      expect(storedFee).to.equal(fee);
-      expect(active).to.equal(true);
+  describe("Batch sync — donations push every prior subname's expiry forward", function () {
+    it("3 prior zero-donation mints all sync to new parent expiry when 4th donates", async function () {
+      const { forwarder, registrar, nameWrapper, user, nft, startExpiry } = await deployAll();
+      // First 3: no donation
+      for (const lbl of ["a-one", "a-two", "a-three"]) {
+        await forwarder.connect(user).register(lbl, 0, await nft.getAddress(), 1, DUMMY_CID, { value: 0 });
+      }
+      // All 3 should currently expire at startExpiry
+      for (const lbl of ["a-one", "a-two", "a-three"]) {
+        const n = ethers.solidityPackedKeccak256(
+          ["bytes32","bytes32"], [PARENT_NODE, ethers.keccak256(ethers.toUtf8Bytes(lbl))]
+        );
+        expect(await nameWrapper.expiries(n)).to.equal(startExpiry);
+      }
+      // 4th donates 5y
+      const req = await registrar.donationPrice(5);
+      await forwarder.connect(user).register("donor", 5, await nft.getAddress(), 1, DUMMY_CID, { value: req });
+      const newExpiry = startExpiry + SECONDS_PER_YEAR * 5n;
+      // All 3 prior subnames must have synced
+      for (const lbl of ["a-one", "a-two", "a-three"]) {
+        const n = ethers.solidityPackedKeccak256(
+          ["bytes32","bytes32"], [PARENT_NODE, ethers.keccak256(ethers.toUtf8Bytes(lbl))]
+        );
+        expect(await nameWrapper.expiries(n)).to.equal(newExpiry);
+      }
+    });
+  });
+
+  describe("Pure donate()", function () {
+    it("extends parent and syncs all existing subnames; no new subname minted", async function () {
+      const { registrar, forwarder, nameWrapper, user, other, nft, startExpiry } = await deployAll();
+      // mint 2 free
+      await forwarder.connect(user).register("d-1", 0, await nft.getAddress(), 1, DUMMY_CID, { value: 0 });
+      await forwarder.connect(user).register("d-2", 0, await nft.getAddress(), 1, DUMMY_CID, { value: 0 });
+      // donate
+      const req = await registrar.donationPrice(2);
+      await registrar.connect(other).donate(2, { value: req });
+      const expected = startExpiry + SECONDS_PER_YEAR * 2n;
+      for (const lbl of ["d-1", "d-2"]) {
+        const n = ethers.solidityPackedKeccak256(
+          ["bytes32","bytes32"], [PARENT_NODE, ethers.keccak256(ethers.toUtf8Bytes(lbl))]
+        );
+        expect(await nameWrapper.expiries(n)).to.equal(expected);
+      }
+      expect(await nameWrapper.expiries(PARENT_NODE)).to.equal(expected);
+      expect(await registrar.totalSubnames()).to.equal(2);
     });
 
-    it("AccessControl admin can set terms", async function () {
-      const { forwarder, artist, acNft } = await deployAll();
+    it("rejects 0 years", async function () {
+      const { registrar, user } = await deployAll();
+      await expect(registrar.connect(user).donate(0, { value: 0 }))
+        .to.be.revertedWithCustomError(registrar, "YearsOutOfRange");
+    });
+  });
+
+  describe("Artist payouts (forwarder)", function () {
+    it("artist gets fee, controller gets ENS price, both flow on same tx", async function () {
+      const { forwarder, registrar, controller, user, artist, nft } = await deployAll();
       const fee = ethers.parseEther("0.001");
-      await forwarder.connect(artist).setArtistTerms(await acNft.getAddress(), artist.address, fee);
-      const [, storedFee, active] = await forwarder.getArtistTerms(await acNft.getAddress());
-      expect(storedFee).to.equal(fee);
-      expect(active).to.equal(true);
-    });
-
-    it("non-owner cannot set terms on Ownable collection", async function () {
-      const { forwarder, other, ownableNft } = await deployAll();
-      await expect(
-        forwarder.connect(other).setArtistTerms(await ownableNft.getAddress(), other.address, ethers.parseEther("0.001"))
-      ).to.be.revertedWithCustomError(forwarder, "NotCollectionOwner");
-    });
-
-    it("opaque collection (no owner/role) cannot be onboarded", async function () {
-      const { forwarder, artist, opaqueNft } = await deployAll();
-      await expect(
-        forwarder.connect(artist).setArtistTerms(await opaqueNft.getAddress(), artist.address, 0)
-      ).to.be.revertedWithCustomError(forwarder, "NotCollectionOwner");
-    });
-
-    it("rejects fee > maxArtistFee", async function () {
-      const { forwarder, artist, ownableNft } = await deployAll();
-      await expect(
-        forwarder.connect(artist).setArtistTerms(await ownableNft.getAddress(), artist.address, ethers.parseEther("0.06"))
-      ).to.be.revertedWithCustomError(forwarder, "ArtistFeeTooHigh");
-    });
-
-    it("rejects zero treasury", async function () {
-      const { forwarder, artist, ownableNft } = await deployAll();
-      await expect(
-        forwarder.connect(artist).setArtistTerms(await ownableNft.getAddress(), ethers.ZeroAddress, 0)
-      ).to.be.revertedWithCustomError(forwarder, "ZeroAddress");
-    });
-
-    it("artist can update their own terms", async function () {
-      const { forwarder, artist, ownableNft } = await deployAll();
-      await forwarder.connect(artist).setArtistTerms(await ownableNft.getAddress(), artist.address, 100);
-      await forwarder.connect(artist).setArtistTerms(await ownableNft.getAddress(), artist.address, 200);
-      const [, fee] = await forwarder.getArtistTerms(await ownableNft.getAddress());
-      expect(fee).to.equal(200);
-    });
-
-    it("artist can clear their own terms", async function () {
-      const { forwarder, artist, ownableNft } = await deployAll();
-      await forwarder.connect(artist).setArtistTerms(await ownableNft.getAddress(), artist.address, ethers.parseEther("0.001"));
-      await expect(
-        forwarder.connect(artist).clearArtistTerms(await ownableNft.getAddress())
-      ).to.emit(forwarder, "ArtistTermsCleared");
-      const [, , active] = await forwarder.getArtistTerms(await ownableNft.getAddress());
-      expect(active).to.equal(false);
-    });
-
-    it("contract owner can emergency-clear bad terms", async function () {
-      const { forwarder, deployer, artist, ownableNft } = await deployAll();
-      await forwarder.connect(artist).setArtistTerms(await ownableNft.getAddress(), artist.address, ethers.parseEther("0.001"));
-      await expect(
-        forwarder.connect(deployer).clearArtistTerms(await ownableNft.getAddress())
-      ).to.emit(forwarder, "ArtistTermsCleared");
-    });
-
-    it("random user cannot clear terms", async function () {
-      const { forwarder, artist, other, ownableNft } = await deployAll();
-      await forwarder.connect(artist).setArtistTerms(await ownableNft.getAddress(), artist.address, 100);
-      await expect(
-        forwarder.connect(other).clearArtistTerms(await ownableNft.getAddress())
-      ).to.be.revertedWithCustomError(forwarder, "NotCollectionOwner");
-    });
-  });
-
-  describe("Registration with artist terms", function () {
-    it("pays artist exactly fee, treasury exactly priceFor(years)", async function () {
-      const { forwarder, registrar, user, artist, treasury, ownableNft } = await deployAll();
-      const fee = ethers.parseEther("0.0025");
-      await forwarder.connect(artist).setArtistTerms(await ownableNft.getAddress(), artist.address, fee);
-
-      const price = await registrar.priceFor(2);
-      const total = price + fee;
+      await forwarder.connect(artist).setArtistTerms(await nft.getAddress(), artist.address, fee);
+      const donation = await registrar.donationPrice(1);
+      const total = donation + fee;
 
       const artistBefore = await ethers.provider.getBalance(artist.address);
-      const treasuryBefore = await ethers.provider.getBalance(treasury.address);
+      const ctrlBefore = await ethers.provider.getBalance(await controller.getAddress());
 
-      await expect(
-        forwarder.connect(user).register("art-1", 2, await ownableNft.getAddress(), 1, DUMMY_CID, { value: total })
-      ).to.emit(forwarder, "ArtistPaid");
+      await forwarder.connect(user).register("ar", 1, await nft.getAddress(), 1, DUMMY_CID, { value: total });
 
       expect(await ethers.provider.getBalance(artist.address) - artistBefore).to.equal(fee);
-      expect(await ethers.provider.getBalance(treasury.address) - treasuryBefore).to.equal(price);
+      expect(await ethers.provider.getBalance(await controller.getAddress()) - ctrlBefore).to.equal(donation);
     });
 
-    it("totalCost view returns base + fee when active, base alone otherwise", async function () {
-      const { forwarder, registrar, artist, ownableNft, opaqueNft } = await deployAll();
-      const fee = ethers.parseEther("0.003");
-      const price1 = await registrar.priceFor(1);
-      await forwarder.connect(artist).setArtistTerms(await ownableNft.getAddress(), artist.address, fee);
-      expect(await forwarder.totalCost(await ownableNft.getAddress(), 1)).to.equal(price1 + fee);
-      // Opaque collection isn't onboarded → only base cost
-      expect(await forwarder.totalCost(await opaqueNft.getAddress(), 1)).to.equal(price1);
-    });
-
-    it("after clearArtistTerms, register stops paying artist", async function () {
-      const { forwarder, registrar, user, artist, treasury, ownableNft } = await deployAll();
+    it("totalCost matches actual required", async function () {
+      const { forwarder, registrar, artist, nft } = await deployAll();
       const fee = ethers.parseEther("0.002");
-      await forwarder.connect(artist).setArtistTerms(await ownableNft.getAddress(), artist.address, fee);
-      await forwarder.connect(artist).clearArtistTerms(await ownableNft.getAddress());
-
-      const price = await registrar.priceFor(1);
-      const artistBefore = await ethers.provider.getBalance(artist.address);
-      const treasuryBefore = await ethers.provider.getBalance(treasury.address);
-
-      await forwarder.connect(user).register("clear", 1, await ownableNft.getAddress(), 1, DUMMY_CID, { value: price });
-      expect(await ethers.provider.getBalance(artist.address) - artistBefore).to.equal(0n);
-      expect(await ethers.provider.getBalance(treasury.address) - treasuryBefore).to.equal(price);
+      await forwarder.connect(artist).setArtistTerms(await nft.getAddress(), artist.address, fee);
+      const expected = (await registrar.donationPrice(2)) + fee;
+      expect(await forwarder.totalCost(await nft.getAddress(), 2)).to.equal(expected);
     });
 
-    it("refunds overpayment beyond price+fee", async function () {
-      const { forwarder, registrar, user, artist, ownableNft } = await deployAll();
-      const fee = ethers.parseEther("0.0025");
-      await forwarder.connect(artist).setArtistTerms(await ownableNft.getAddress(), artist.address, fee);
-
-      const price = await registrar.priceFor(1);
-      const total = price + fee;
-      const overpay = ethers.parseEther("0.5");
-      const before = await ethers.provider.getBalance(user.address);
-      const tx = await forwarder.connect(user).register(
-        "art-3", 1, await ownableNft.getAddress(), 3, DUMMY_CID, { value: total + overpay }
-      );
-      const rcpt = await tx.wait();
-      const gas = rcpt.gasUsed * rcpt.gasPrice;
-      expect(before - await ethers.provider.getBalance(user.address)).to.equal(total + gas);
-    });
-
-    it("reverts atomically if artist treasury rejects ETH", async function () {
-      const { forwarder, registrar, user, artist, rejecting, ownableNft } = await deployAll();
-      const fee = ethers.parseEther("0.001");
-      // Treasury is a contract that rejects payments
-      await forwarder.connect(artist).setArtistTerms(await ownableNft.getAddress(), await rejecting.getAddress(), fee);
-      const price = await registrar.priceFor(1);
-      await expect(
-        forwarder.connect(user).register("reject", 1, await ownableNft.getAddress(), 1, DUMMY_CID, { value: price + fee })
-      ).to.be.revertedWithCustomError(forwarder, "TransferFailed");
-    });
-
-    it("reverts InsufficientPayment when value < price + artistFee", async function () {
-      const { forwarder, registrar, user, artist, ownableNft } = await deployAll();
-      const fee = ethers.parseEther("0.002");
-      await forwarder.connect(artist).setArtistTerms(await ownableNft.getAddress(), artist.address, fee);
-      const price = await registrar.priceFor(1);
-      await expect(
-        forwarder.connect(user).register("under", 1, await ownableNft.getAddress(), 1, DUMMY_CID, { value: price })
-      ).to.be.revertedWithCustomError(forwarder, "InsufficientPayment")
-       .withArgs(price + fee, price);
+    it("artist fee 0 when collection has no terms", async function () {
+      const { forwarder, registrar, nft } = await deployAll();
+      const expected = await registrar.donationPrice(1);
+      expect(await forwarder.totalCost(await nft.getAddress(), 1)).to.equal(expected);
     });
   });
 
-  describe("Label validation", function () {
-    const cases = [
-      ["UPPER", "Upper"],
-      ["under_score", "under_score"],
-      ["-leading", "-leading"],
-      ["trailing-", "trailing-"],
-      ["empty", ""],
-    ];
-    for (const [name, label] of cases) {
-      it(`rejects ${name}`, async function () {
-        const { forwarder, registrar, user, ownableNft } = await deployAll();
-        const price = await registrar.priceFor(1);
+  describe("Label validation + pause + auth (regression)", function () {
+    it("rejects invalid labels", async function () {
+      const { forwarder, registrar, user, nft } = await deployAll();
+      for (const bad of ["UPPER", "und_score", "-lead", "trail-", ""]) {
         await expect(
-          forwarder.connect(user).register(label, 1, await ownableNft.getAddress(), 1, DUMMY_CID, { value: price })
+          forwarder.connect(user).register(bad, 0, await nft.getAddress(), 1, DUMMY_CID, { value: 0 })
         ).to.be.reverted;
-      });
-    }
-    it("rejects > 32 chars", async function () {
-      const { forwarder, registrar, user, ownableNft } = await deployAll();
-      const long = "a".repeat(33);
-      const price = await registrar.priceFor(1);
-      await expect(
-        forwarder.connect(user).register(long, 1, await ownableNft.getAddress(), 1, DUMMY_CID, { value: price })
-      ).to.be.revertedWithCustomError(registrar, "LabelTooLong");
+      }
     });
-    it("accepts exactly 32 chars", async function () {
-      const { forwarder, registrar, user, ownableNft } = await deployAll();
-      const ok = "a".repeat(32);
-      const price = await registrar.priceFor(1);
-      await expect(
-        forwarder.connect(user).register(ok, 1, await ownableNft.getAddress(), 1, DUMMY_CID, { value: price })
-      ).to.not.be.reverted;
-    });
-  });
 
-  describe("Years validation", function () {
-    it("rejects 0 years", async function () {
-      const { forwarder, registrar, user, ownableNft } = await deployAll();
-      await expect(
-        forwarder.connect(user).register("zero", 0, await ownableNft.getAddress(), 1, DUMMY_CID, { value: PLATFORM_FEE })
-      ).to.be.revertedWithCustomError(registrar, "YearsOutOfRange");
-    });
-    it("rejects 11 years", async function () {
-      const { forwarder, registrar, user, ownableNft } = await deployAll();
-      const price = await registrar.priceFor(11);
-      await expect(
-        forwarder.connect(user).register("eleven", 11, await ownableNft.getAddress(), 1, DUMMY_CID, { value: price })
-      ).to.be.revertedWithCustomError(registrar, "YearsOutOfRange");
-    });
-  });
-
-  describe("Pause", function () {
-    it("blocks register when paused; resumes on unpause", async function () {
-      const { forwarder, registrar, deployer, user, ownableNft } = await deployAll();
-      const price = await registrar.priceFor(1);
+    it("pause blocks register + donate", async function () {
+      const { registrar, forwarder, deployer, user, nft } = await deployAll();
       await registrar.connect(deployer).pause();
-      await expect(
-        forwarder.connect(user).register("paused", 1, await ownableNft.getAddress(), 1, DUMMY_CID, { value: price })
-      ).to.be.reverted;
+      await expect(forwarder.connect(user).register("p", 0, await nft.getAddress(), 1, DUMMY_CID, { value: 0 })).to.be.reverted;
+      const req = await registrar.donationPrice(1);
+      await expect(registrar.connect(user).donate(1, { value: req })).to.be.reverted;
       await registrar.connect(deployer).unpause();
-      await expect(
-        forwarder.connect(user).register("paused", 1, await ownableNft.getAddress(), 1, DUMMY_CID, { value: price })
-      ).to.not.be.reverted;
+      await expect(forwarder.connect(user).register("p", 0, await nft.getAddress(), 1, DUMMY_CID, { value: 0 })).to.not.be.reverted;
     });
-  });
 
-  describe("Direct authorization on registrar", function () {
-    it("non-forwarder caller registering with different _owner reverts", async function () {
-      const { registrar, user, other, ownableNft } = await deployAll();
-      const price = await registrar.priceFor(1);
+    it("direct registrar.register from non-forwarder for someone else reverts", async function () {
+      const { registrar, user, other, nft } = await deployAll();
       await expect(
-        registrar.connect(user).register("unauth", 1, other.address, await ownableNft.getAddress(), 1, DUMMY_CID, { value: price })
+        registrar.connect(user).register("x", 0, other.address, await nft.getAddress(), 1, DUMMY_CID, { value: 0 })
       ).to.be.revertedWithCustomError(registrar, "NotForwarderOrSelf");
     });
-    it("user calling registrar directly with _owner == self succeeds", async function () {
-      const { registrar, user, ownableNft } = await deployAll();
-      const price = await registrar.priceFor(1);
+
+    it("duplicate label rejected", async function () {
+      const { forwarder, user, nft } = await deployAll();
+      await forwarder.connect(user).register("dup", 0, await nft.getAddress(), 1, DUMMY_CID, { value: 0 });
       await expect(
-        registrar.connect(user).register("self", 1, user.address, await ownableNft.getAddress(), 1, DUMMY_CID, { value: price })
-      ).to.not.be.reverted;
+        forwarder.connect(user).register("dup", 0, await nft.getAddress(), 1, DUMMY_CID, { value: 0 })
+      ).to.be.reverted;
     });
   });
 
-  describe("Renewal via extendExpiry", function () {
-    it("extends expiry by years*365d, costs pricePerYear*years, calls extendExpiry", async function () {
-      const { forwarder, registrar, user, treasury, nameWrapper, ownableNft } = await deployAll();
-      const price = await registrar.priceFor(1);
-      await forwarder.connect(user).register("renewme", 1, await ownableNft.getAddress(), 1, DUMMY_CID, { value: price });
-
-      const labelhash = ethers.keccak256(ethers.toUtf8Bytes("renewme"));
-      const recBefore = await registrar.records(labelhash);
-      const oldExpiry = recBefore.expiry;
-
-      const renewCost = PRICE_PER_YEAR * 2n;
-      const treasuryBefore = await ethers.provider.getBalance(treasury.address);
-
-      const tx = await registrar.connect(user).renew("renewme", 2, { value: renewCost });
-      const rcpt = await tx.wait();
-      await expect(tx).to.emit(registrar, "Renewed");
-
-      // Verify extendExpiry was called on the wrapper
-      const wrapperAddr = (await nameWrapper.getAddress()).toLowerCase();
-      const extendLogs = rcpt.logs
-        .filter(l => l.address.toLowerCase() === wrapperAddr)
-        .map(l => nameWrapper.interface.parseLog(l))
-        .filter(p => p && p.name === "ExpiryExtended");
-      expect(extendLogs.length).to.equal(1);
-      expect(extendLogs[0].args.labelhash).to.equal(labelhash);
-
-      const recAfter = await registrar.records(labelhash);
-      expect(recAfter.expiry - oldExpiry).to.equal(2n * 365n * 24n * 60n * 60n);
-      expect(await ethers.provider.getBalance(treasury.address) - treasuryBefore).to.equal(renewCost);
-    });
-    it("can be called by anyone", async function () {
-      const { forwarder, registrar, user, other, ownableNft } = await deployAll();
-      const price = await registrar.priceFor(1);
-      await forwarder.connect(user).register("anyone", 1, await ownableNft.getAddress(), 1, DUMMY_CID, { value: price });
-      await expect(
-        registrar.connect(other).renew("anyone", 1, { value: PRICE_PER_YEAR })
-      ).to.not.be.reverted;
-    });
-    it("reverts InsufficientPayment when underpaid", async function () {
-      const { forwarder, registrar, user, ownableNft } = await deployAll();
-      const price = await registrar.priceFor(1);
-      await forwarder.connect(user).register("under", 1, await ownableNft.getAddress(), 1, DUMMY_CID, { value: price });
-      await expect(
-        registrar.connect(user).renew("under", 1, { value: PRICE_PER_YEAR - 1n })
-      ).to.be.revertedWithCustomError(registrar, "InsufficientPayment");
+  describe("syncRange — paginated catch-up", function () {
+    it("brings a tail of subnames forward to current parent expiry", async function () {
+      const { registrar, forwarder, nameWrapper, deployer, user, nft, startExpiry } = await deployAll();
+      // Constrain so we know which got auto-synced.
+      await registrar.connect(deployer).setMaxSyncPerTx(0);
+      // Mint 2 free
+      await forwarder.connect(user).register("s-1", 0, await nft.getAddress(), 1, DUMMY_CID, { value: 0 });
+      await forwarder.connect(user).register("s-2", 0, await nft.getAddress(), 1, DUMMY_CID, { value: 0 });
+      // Donate 1y — but maxSyncPerTx=0 so neither was auto-synced
+      const req = await registrar.donationPrice(1);
+      await registrar.connect(user).donate(1, { value: req });
+      const newExpiry = startExpiry + SECONDS_PER_YEAR;
+      for (const lbl of ["s-1", "s-2"]) {
+        const n = ethers.solidityPackedKeccak256(["bytes32","bytes32"], [PARENT_NODE, ethers.keccak256(ethers.toUtf8Bytes(lbl))]);
+        expect(await nameWrapper.expiries(n)).to.equal(startExpiry); // still stale
+      }
+      // Catch them up manually
+      await registrar.syncRange(0, 2);
+      for (const lbl of ["s-1", "s-2"]) {
+        const n = ethers.solidityPackedKeccak256(["bytes32","bytes32"], [PARENT_NODE, ethers.keccak256(ethers.toUtf8Bytes(lbl))]);
+        expect(await nameWrapper.expiries(n)).to.equal(newExpiry);
+      }
     });
   });
 });

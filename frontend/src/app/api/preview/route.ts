@@ -51,6 +51,16 @@ export async function GET(req: NextRequest) {
       ...(t.trait_count ? { rarity: t.trait_count } : {}),
     }));
 
+    const mintYear = new Date().getFullYear();
+    const rawHandle = url.searchParams.get("x") || "";
+    const handle = rawHandle.trim().replace(/^@+/, "").replace(/[^A-Za-z0-9_]/g, "").slice(0, 15);
+    const xRow = handle
+      ? `<div class="wallcard__row"><span class="wallcard__label">X</span><a class="wallcard__x" href="https://x.com/${handle}" target="_blank" rel="noopener">@${handle}</a></div>`
+      : "";
+    const idNum = Number(tokenId);
+    const last4 = isNaN(idNum) ? String(tokenId).slice(-4).padStart(4, "0") : String(idNum % 10000).padStart(4, "0");
+    const accession = `ACQ · ${mintYear} · ${last4}`;
+
     const vars: Record<string, string> = {
       NFT_NAME: nft.name || `#${tokenId}`,
       NFT_DESCRIPTION: (nft.description || "").replace(/</g, "&lt;"),
@@ -58,15 +68,18 @@ export async function GET(req: NextRequest) {
       COLLECTION_NAME: nft.collection || "",
       TOKEN_ID: String(tokenId),
       BLOCKCHAIN: CHAIN_SLUG === "ethereum" ? "Ethereum" : "Sepolia",
-      SUBDOMAIN: `${subdomain}.artid.eth`,
+      SUBDOMAIN: subdomain,
       CONTRACT_ADDRESS: contract,
       CONTRACT_ADDRESS_SHORT: short(contract),
       OWNER_ADDRESS_SHORT: ownerAddr ? short(ownerAddr) : "—",
       TOKEN_STANDARD: nft.token_standard || "ERC721",
       MINT_DATE: new Date().toISOString().slice(0, 10),
-      ARTID_MINT_YEAR: String(new Date().getFullYear()),
+      ARTID_MINT_YEAR: String(mintYear),
       IPFS_CID_SHORT: "—",
       TRAITS_JSON: JSON.stringify(traits),
+      ACCESSION: accession,
+      HOLDER_X_ROW: xRow,
+      HOLDER_X: handle,
     };
 
     // Read template, fill placeholders, inline CSS + JS so the iframe is self-contained

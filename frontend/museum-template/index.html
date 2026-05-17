@@ -12,16 +12,16 @@
 <meta property="og:image" content="{{NFT_IMAGE_URL}}" />
 <meta property="og:type" content="website" />
 
-<!-- Fonts: a refined editorial pairing — Cormorant Garamond for display, Manrope for UI -->
+<!-- Fonts: Cormorant Garamond (display) + Manrope (UI) + JetBrains Mono (addresses) -->
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 
 <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
 
-<!-- ─────────────── GALLERY HALL ─────────────── -->
+<!-- ─────────────── THE HALL ─────────────── -->
 <main class="hall" id="hall">
 
   <!-- Ambient lighting & atmosphere -->
@@ -34,15 +34,13 @@
     <div class="dust"></div>
   </div>
 
-  <!-- Camera flash overlay (triggered by JS) -->
+  <!-- Camera flash overlay (triggered by JS, positioned via CSS vars) -->
   <div class="flash" id="flash" aria-hidden="true"></div>
 
-  <!-- Animated visitor silhouettes -->
-  <div class="visitors" aria-hidden="true">
-    <!-- Visitors are injected by script.js so their walk paths, sizes, and flash timing can be randomized -->
-  </div>
+  <!-- Five visitor silhouettes injected by script.js -->
+  <div class="visitors" aria-hidden="true"></div>
 
-  <!-- Top navigation / branding -->
+  <!-- Top bar -->
   <header class="topbar">
     <a class="brand" href="https://artid.eth" target="_blank" rel="noopener">
       <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
@@ -56,9 +54,26 @@
     </div>
   </header>
 
-  <!-- The artwork itself -->
+  <!-- The artwork + the wall card beside it -->
   <section class="exhibit">
+
     <figure class="frame" id="frame">
+      <!-- Picture lights — two brass fixtures casting overlapping warm cones onto the work -->
+      <div class="frame__lights" aria-hidden="true">
+        <span class="cone cone--left" aria-hidden="true"></span>
+        <span class="lamp lamp--left"></span>
+
+        <span class="cone cone--right" aria-hidden="true"></span>
+        <span class="lamp lamp--right"></span>
+      </div>
+
+      <!-- Left rail — institutional accession marker -->
+      <aside class="rail" aria-hidden="true">
+        <span class="rail__top">Permanent Collection</span>
+        <span class="rail__rule"></span>
+        <span class="rail__acc">{{ACCESSION}}</span>
+      </aside>
+
       <div class="frame__matte">
         <img
           class="frame__art"
@@ -69,23 +84,53 @@
         />
       </div>
       <figcaption class="plaque">
-        <div class="plaque__row plaque__row--title">
-          <span class="plaque__title">{{NFT_NAME}}</span>
-        </div>
-        <div class="plaque__row">
-          <span class="plaque__label">Collection</span>
-          <span class="plaque__value">{{COLLECTION_NAME}}</span>
-        </div>
-        <div class="plaque__row">
-          <span class="plaque__label">Token</span>
-          <span class="plaque__value">#{{TOKEN_ID}}</span>
-        </div>
-        <div class="plaque__row">
-          <span class="plaque__label">Chain</span>
-          <span class="plaque__value">{{BLOCKCHAIN}}</span>
-        </div>
+        <span class="plaque__title">{{NFT_NAME}}</span>
+        <span class="plaque__sub">Passport № {{TOKEN_ID}}</span>
       </figcaption>
     </figure>
+
+    <!-- Creator wall card — small, precise, generous whitespace -->
+    <aside class="wallcard" aria-label="Creator">
+      <span class="wallcard__eyebrow">— The Creator —</span>
+      <h2 class="wallcard__title">{{COLLECTION_NAME}}</h2>
+      <p class="wallcard__byline">on Ethereum mainnet</p>
+      <div class="wallcard__rule"></div>
+
+      <div class="wallcard__rows">
+        <div class="wallcard__row">
+          <span class="wallcard__label">Contract</span>
+          <span class="wallcard__value">
+            <span class="addr" tabindex="0">
+              <span class="addr__short mono">{{CONTRACT_ADDRESS_SHORT}}</span>
+              <span class="addr__full mono">{{CONTRACT_ADDRESS}}</span>
+            </span>
+          </span>
+        </div>
+        <div class="wallcard__row">
+          <span class="wallcard__label">Standard</span>
+          <span class="wallcard__value">{{TOKEN_STANDARD}}</span>
+        </div>
+        <div class="wallcard__row">
+          <span class="wallcard__label">Minted</span>
+          <span class="wallcard__value">{{MINT_DATE}}</span>
+        </div>
+        <div class="wallcard__row">
+          <span class="wallcard__label">Holder</span>
+          <span class="wallcard__value mono">{{OWNER_ADDRESS_SHORT}}</span>
+        </div>
+        {{HOLDER_X_ROW}}
+      </div>
+
+      <a class="wallcard__link"
+         href="https://opensea.io/assets/ethereum/{{CONTRACT_ADDRESS}}/{{TOKEN_ID}}"
+         target="_blank" rel="noopener">
+        View on OpenSea
+        <svg viewBox="0 0 14 14" width="10" height="10" aria-hidden="true">
+          <path d="M3 11L11 3M5 3h6v6" fill="none" stroke="currentColor" stroke-width="1.2"/>
+        </svg>
+      </a>
+    </aside>
+
   </section>
 
   <!-- Scroll cue -->
@@ -97,31 +142,32 @@
   </div>
 </main>
 
-<!-- ─────────────── PASSPORT / METADATA ─────────────── -->
+
+<!-- ─────────────── THE PASSPORT ─────────────── -->
 <section class="passport">
   <div class="passport__inner">
 
     <div class="passport__heading">
-      <span class="eyebrow">— Passport No. {{TOKEN_ID}} —</span>
+      <span class="eyebrow">— Passport № {{TOKEN_ID}} —</span>
       <h1 class="display">{{NFT_NAME}}</h1>
       <p class="lede">{{NFT_DESCRIPTION}}</p>
     </div>
 
-    <!-- Traits -->
+    <!-- Attributes -->
     <div class="block">
       <h2 class="block__title">Attributes</h2>
       <div class="traits" id="traits">
-        <!-- TRAITS_PLACEHOLDER — JSON injected here, rendered by script.js -->
+        <!-- script.js renders traits from #traits-data -->
       </div>
     </div>
 
-    <!-- On-chain provenance -->
+    <!-- On-chain provenance (full record for machine-readability) -->
     <div class="block">
       <h2 class="block__title">On-Chain Provenance</h2>
       <dl class="ledger">
         <div class="ledger__row">
           <dt>Contract</dt>
-          <dd><a href="https://etherscan.io/address/{{CONTRACT_ADDRESS}}" target="_blank" rel="noopener" class="mono">{{CONTRACT_ADDRESS_SHORT}}</a></dd>
+          <dd><a href="https://etherscan.io/address/{{CONTRACT_ADDRESS}}" target="_blank" rel="noopener" class="mono">{{CONTRACT_ADDRESS}}</a></dd>
         </div>
         <div class="ledger__row">
           <dt>Token Standard</dt>
@@ -133,7 +179,7 @@
         </div>
         <div class="ledger__row">
           <dt>Blockchain</dt>
-          <dd>{{BLOCKCHAIN}}</dd>
+          <dd>Ethereum Mainnet</dd>
         </div>
         <div class="ledger__row">
           <dt>Mint Date</dt>
@@ -158,7 +204,7 @@
       </div>
     </div>
 
-    <!-- Exhibition history (placeholders for MVP) -->
+    <!-- Exhibition history -->
     <div class="block">
       <h2 class="block__title">Exhibition History</h2>
       <ul class="timeline">
@@ -182,6 +228,7 @@
   </div>
 </section>
 
+
 <!-- ─────────────── FOOTER ─────────────── -->
 <footer class="foot">
   <div class="foot__inner">
@@ -196,14 +243,16 @@
   </div>
 </footer>
 
+
 <!-- ─────────────── LIGHTBOX ─────────────── -->
-<div class="lightbox" id="lightbox" role="dialog" aria-hidden="true">
+<div class="lightbox" id="lightbox" role="dialog" aria-hidden="true" aria-modal="true">
   <button class="lightbox__close" id="lightboxClose" aria-label="Close">×</button>
   <img class="lightbox__img" id="lightboxImg" alt="{{NFT_NAME}}" />
+  <div class="lightbox__caption">{{NFT_NAME}}</div>
 </div>
 
-<!-- Inline JSON dump of traits so the generator only needs to replace one block.
-     The build pipeline replaces this entire <script> block with the real trait array. -->
+
+<!-- Traits JSON — the build pipeline replaces this whole block -->
 <script id="traits-data" type="application/json">
 {{TRAITS_JSON}}
 </script>

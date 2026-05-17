@@ -11,5 +11,9 @@
     "@openzeppelin/contracts": "^5.0.2",
     "dotenv": "^17.4.2",
     "hardhat": "^2.22.0"
+  },
+  "dependencies": {
+    "@ensdomains/content-hash": "^3.0.0",
+    "bs58": "^6.0.0"
   }
 }
