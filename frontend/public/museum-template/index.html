@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="description" content="{{NFT_NAME}} — a permanent museum passport on ENS + IPFS. Powered by artid.eth" />
+<title>{{NFT_NAME}} · ArtID Museum</title>
+
+<!-- Open Graph -->
+<meta property="og:title" content="{{NFT_NAME}} · ArtID Museum" />
+<meta property="og:description" content="{{NFT_DESCRIPTION}}" />
+<meta property="og:image" content="{{NFT_IMAGE_URL}}" />
+<meta property="og:type" content="website" />
+
+<!-- Fonts: Cormorant Garamond (display) + Manrope (UI) + JetBrains Mono (addresses) -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+<link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+
+<!-- ─────────────── THE HALL ─────────────── -->
+<main class="hall" id="hall">
+
+  <!-- Ambient lighting & atmosphere -->
+  <div class="ambient">
+    <div class="spotlight spotlight--main"></div>
+    <div class="spotlight spotlight--left"></div>
+    <div class="spotlight spotlight--right"></div>
+    <div class="floor"></div>
+    <div class="wall-grain"></div>
+    <div class="dust"></div>
+  </div>
+
+  <!-- Camera flash overlay (triggered by JS, positioned via CSS vars) -->
+  <div class="flash" id="flash" aria-hidden="true"></div>
+
+  <!-- Five visitor silhouettes injected by script.js -->
+  <div class="visitors" aria-hidden="true"></div>
+
+  <!-- Top bar -->
+  <header class="topbar">
+    <a class="brand" href="https://artid.eth" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+        <path d="M3 21h18M5 21V8l7-5 7 5v13M9 21v-8h6v8" fill="none" stroke="currentColor" stroke-width="1.2"/>
+      </svg>
+      <span>ArtID</span>
+    </a>
+    <div class="hall-meta">
+      <span class="hall-meta__label">Hall</span>
+      <span class="hall-meta__value">{{SUBDOMAIN}}.artid.eth</span>
+    </div>
+  </header>
+
+  <!-- The artwork + the wall card beside it -->
+  <section class="exhibit">
+
+    <figure class="frame" id="frame">
+      <!-- Picture lights — two brass fixtures casting overlapping warm cones onto the work -->
+      <div class="frame__lights" aria-hidden="true">
+        <span class="cone cone--left" aria-hidden="true"></span>
+        <span class="lamp lamp--left"></span>
+
+        <span class="cone cone--right" aria-hidden="true"></span>
+        <span class="lamp lamp--right"></span>
+      </div>
+
+      <!-- Left rail — institutional accession marker -->
+      <aside class="rail" aria-hidden="true">
+        <span class="rail__top">Permanent Collection</span>
+        <span class="rail__rule"></span>
+        <span class="rail__acc">{{ACCESSION}}</span>
+      </aside>
+
+      <div class="frame__matte">
+        <img
+          class="frame__art"
+          id="artwork"
+          src="{{NFT_IMAGE_URL}}"
+          alt="{{NFT_NAME}}"
+          loading="eager"
+        />
+      </div>
+      <figcaption class="plaque">
+        <span class="plaque__title">{{NFT_NAME}}</span>
+        <span class="plaque__sub">Passport № {{TOKEN_ID}}</span>
+      </figcaption>
+    </figure>
+
+    <!-- Creator wall card — small, precise, generous whitespace -->
+    <aside class="wallcard" aria-label="Creator">
+      <span class="wallcard__eyebrow">— The Creator —</span>
+      <h2 class="wallcard__title">{{COLLECTION_NAME}}</h2>
+      <p class="wallcard__byline">on Ethereum mainnet</p>
+      <div class="wallcard__rule"></div>
+
+      <div class="wallcard__rows">
+        <div class="wallcard__row">
+          <span class="wallcard__label">Contract</span>
+          <span class="wallcard__value">
+            <span class="addr" tabindex="0">
+              <span class="addr__short mono">{{CONTRACT_ADDRESS_SHORT}}</span>
+              <span class="addr__full mono">{{CONTRACT_ADDRESS}}</span>
+            </span>
+          </span>
+        </div>
+        <div class="wallcard__row">
+          <span class="wallcard__label">Standard</span>
+          <span class="wallcard__value">{{TOKEN_STANDARD}}</span>
+        </div>
+        <div class="wallcard__row">
+          <span class="wallcard__label">Minted</span>
+          <span class="wallcard__value">{{MINT_DATE}}</span>
+        </div>
+        <div class="wallcard__row">
+          <span class="wallcard__label">Holder</span>
+          <span class="wallcard__value mono">{{OWNER_ADDRESS_SHORT}}</span>
+        </div>
+        {{HOLDER_X_ROW}}
+      </div>
+
+      <a class="wallcard__link"
+         href="https://opensea.io/assets/ethereum/{{CONTRACT_ADDRESS}}/{{TOKEN_ID}}"
+         target="_blank" rel="noopener">
+        View on OpenSea
+        <svg viewBox="0 0 14 14" width="10" height="10" aria-hidden="true">
+          <path d="M3 11L11 3M5 3h6v6" fill="none" stroke="currentColor" stroke-width="1.2"/>
+        </svg>
+      </a>
+    </aside>
+
+  </section>
+
+  <!-- Scroll cue -->
+  <div class="scroll-cue" aria-hidden="true">
+    <span>scroll to read</span>
+    <svg viewBox="0 0 12 24" width="12" height="24">
+      <path d="M6 2v18M2 16l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1"/>
+    </svg>
+  </div>
+</main>
+
+
+<!-- ─────────────── THE PASSPORT ─────────────── -->
+<section class="passport">
+  <div class="passport__inner">
+
+    <div class="passport__heading">
+      <span class="eyebrow">— Passport № {{TOKEN_ID}} —</span>
+      <h1 class="display">{{NFT_NAME}}</h1>
+      <p class="lede">{{NFT_DESCRIPTION}}</p>
+    </div>
+
+    <!-- Attributes -->
+    <div class="block">
+      <h2 class="block__title">Attributes</h2>
+      <div class="traits" id="traits">
+        <!-- script.js renders traits from #traits-data -->
+      </div>
+    </div>
+
+    <!-- On-chain provenance (full record for machine-readability) -->
+    <div class="block">
+      <h2 class="block__title">On-Chain Provenance</h2>
+      <dl class="ledger">
+        <div class="ledger__row">
+          <dt>Contract</dt>
+          <dd><a href="https://etherscan.io/address/{{CONTRACT_ADDRESS}}" target="_blank" rel="noopener" class="mono">{{CONTRACT_ADDRESS}}</a></dd>
+        </div>
+        <div class="ledger__row">
+          <dt>Token Standard</dt>
+          <dd>{{TOKEN_STANDARD}}</dd>
+        </div>
+        <div class="ledger__row">
+          <dt>Token ID</dt>
+          <dd class="mono">{{TOKEN_ID}}</dd>
+        </div>
+        <div class="ledger__row">
+          <dt>Blockchain</dt>
+          <dd>Ethereum Mainnet</dd>
+        </div>
+        <div class="ledger__row">
+          <dt>Mint Date</dt>
+          <dd>{{MINT_DATE}}</dd>
+        </div>
+        <div class="ledger__row">
+          <dt>Current Holder</dt>
+          <dd class="mono">{{OWNER_ADDRESS_SHORT}}</dd>
+        </div>
+      </dl>
+
+      <div class="links">
+        <a class="btn-link" href="https://opensea.io/assets/ethereum/{{CONTRACT_ADDRESS}}/{{TOKEN_ID}}" target="_blank" rel="noopener">
+          View on OpenSea →
+        </a>
+        <a class="btn-link" href="https://etherscan.io/token/{{CONTRACT_ADDRESS}}?a={{TOKEN_ID}}" target="_blank" rel="noopener">
+          View on Etherscan →
+        </a>
+        <a class="btn-link" href="https://app.ens.domains/{{SUBDOMAIN}}.artid.eth" target="_blank" rel="noopener">
+          ENS Manager →
+        </a>
+      </div>
+    </div>
+
+    <!-- Exhibition history -->
+    <div class="block">
+      <h2 class="block__title">Exhibition History</h2>
+      <ul class="timeline">
+        <li class="timeline__item">
+          <span class="timeline__year">{{ARTID_MINT_YEAR}}</span>
+          <div>
+            <strong>Inaugurated at ArtID Museum</strong>
+            <p>This passport was minted at <span class="mono">{{SUBDOMAIN}}.artid.eth</span> and pinned permanently to IPFS.</p>
+          </div>
+        </li>
+        <li class="timeline__item timeline__item--placeholder">
+          <span class="timeline__year">—</span>
+          <div>
+            <strong>Future exhibitions</strong>
+            <p>Curators may extend this passport with verified exhibition records.</p>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ─────────────── FOOTER ─────────────── -->
+<footer class="foot">
+  <div class="foot__inner">
+    <div>
+      <div class="foot__mark">ArtID</div>
+      <div class="foot__line">This artwork lives forever on IPFS · Powered by <a href="https://artid.eth" target="_blank" rel="noopener">artid.eth</a></div>
+    </div>
+    <div class="foot__cid">
+      <span class="foot__cid-label">IPFS</span>
+      <span class="mono">{{IPFS_CID_SHORT}}</span>
+    </div>
+  </div>
+</footer>
+
+
+<!-- ─────────────── LIGHTBOX ─────────────── -->
+<div class="lightbox" id="lightbox" role="dialog" aria-hidden="true" aria-modal="true">
+  <button class="lightbox__close" id="lightboxClose" aria-label="Close">×</button>
+  <img class="lightbox__img" id="lightboxImg" alt="{{NFT_NAME}}" />
+  <div class="lightbox__caption">{{NFT_NAME}}</div>
+</div>
+
+
+<!-- Traits JSON — the build pipeline replaces this whole block -->
+<script id="traits-data" type="application/json">
+{{TRAITS_JSON}}
+</script>
+
+<script src="./script.js" defer></script>
+</body>
+</html>

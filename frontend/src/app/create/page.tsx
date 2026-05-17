@@ -1,64 +1,72 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt, useEstimateFeesPerGas, useChainId, useSwitchChain, usePublicClient } from "wagmi";
 import { formatEther, isAddress, getAddress } from "viem";
 import { mainnet } from "wagmi/chains";
 import Link from "next/link";
 import { generateSlug } from "@/lib/slug";
+import { resolveAvailableSlug } from "@/lib/slug-client";
 import { FORWARDER_ADDRESS, FORWARDER_ABI, REGISTRAR_ADDRESS, REGISTRAR_ABI } from "@/lib/contracts";
 import { useEthUsd, formatEthAndUsd } from "@/lib/useEthUsd";
-
-type Nft = {
-  contract: string;
-  identifier: string;
-  name?: string | null;
-  description?: string | null;
-  display_image_url?: string | null;
-  image_url?: string | null;
-  collection?: string | null;
-};
+import { fetchNft, type OpenSeaNft } from "@/lib/opensea";
+import { buildMuseumFiles, buildPreviewHtml } from "@/lib/museum-generate";
+import { pinSiteFolder } from "@/lib/pinata-browser";
 
 const DONATE_OPTIONS = [0, 1, 2, 5, 10] as const;
 const FALLBACK_GAS = 700_000n;
 
-export default function CreatePage({ params }: { params: { contract: string; tokenId: string } }) {
-  const { contract: rawContract, tokenId } = params;
+export default function CreatePageWrapper() {
+  return (
+    <Suspense fallback={<div className="p-24 text-center text-[#a89e85] font-display italic">Loading…</div>}>
+      <CreatePage />
+    </Suspense>
+  );
+}
+
+function CreatePage() {
+  const sp = useSearchParams();
+  const rawContract = sp.get("c") || "";
+  const tokenId = sp.get("t") || "";
   const contract = isAddress(rawContract) ? getAddress(rawContract) : rawContract;
+
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
   const { switchChainAsync } = useSwitchChain();
   const publicClient = usePublicClient({ chainId: mainnet.id });
 
-  const [nft, setNft] = useState<Nft | null>(null);
+  const [nft, setNft] = useState<OpenSeaNft | null>(null);
   const [nftErr, setNftErr] = useState<string | null>(null);
   const [slug, setSlug] = useState<string>("");
   const [donateYears, setDonateYears] = useState<number>(0);
   const [xHandle, setXHandle] = useState<string>("");
+  const [previewSrcDoc, setPreviewSrcDoc] = useState<string>("");
   const [deploying, setDeploying] = useState(false);
   const [step, setStep] = useState<string>("");
   const [err, setErr] = useState<string | null>(null);
   const [cid, setCid] = useState<string>("");
+
+  if (!contract || !tokenId) {
+    return <CenteredMessage title="Missing NFT reference" body="Open a passport from the dashboard." />;
+  }
 
   // Fetch NFT
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const r = await fetch(`/api/nfts/single?contract=${contract}&tokenId=${tokenId}`);
-        const d = await r.json();
+        const data = await fetchNft(contract, tokenId);
         if (cancelled) return;
-        if (d.error) throw new Error(d.error);
-        if (!d.nft) throw new Error("No NFT data returned");
-        setNft(d.nft);
+        if (!data) throw new Error("No NFT data returned");
+        setNft(data);
         const base = generateSlug({
           contract, identifier: tokenId,
-          name: d.nft.name ?? undefined,
-          collection: d.nft.collection ?? undefined,
+          name: data.name ?? undefined,
+          collection: data.collection ?? undefined,
         });
         try {
-          const s = await fetch(`/api/slug?base=${encodeURIComponent(base)}`);
-          const j = await s.json();
-          if (!cancelled) setSlug(j.slug || base);
+          const s = await resolveAvailableSlug(base);
+          if (!cancelled) setSlug(s);
         } catch { if (!cancelled) setSlug(base); }
       } catch (e: any) {
         if (!cancelled) setNftErr(e.message || String(e));
@@ -67,7 +75,17 @@ export default function CreatePage({ params }: { params: { contract: string; tok
     return () => { cancelled = true; };
   }, [contract, tokenId]);
 
-  // Live ENS donation price + parent expiry
+  // Live preview HTML — built client-side and injected via srcDoc
+  useEffect(() => {
+    if (!nft || !slug) return;
+    let cancelled = false;
+    buildPreviewHtml({ nft, contract, tokenId, subdomain: slug, xHandle })
+      .then(html => { if (!cancelled) setPreviewSrcDoc(html); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [nft, slug, xHandle, contract, tokenId]);
+
+  // Pricing
   const { data: donationPrice } = useReadContract({
     address: REGISTRAR_ADDRESS, abi: REGISTRAR_ABI, functionName: "donationPrice", args: [BigInt(donateYears)],
   });
@@ -85,7 +103,6 @@ export default function CreatePage({ params }: { params: { contract: string; tok
   const ethUsd = useEthUsd();
   const { data: fees } = useEstimateFeesPerGas({ chainId: mainnet.id });
 
-  // Live gas simulation
   const [gasUnits, setGasUnits] = useState<bigint | undefined>();
   useEffect(() => {
     if (!publicClient || !slug || !address) return;
@@ -106,7 +123,6 @@ export default function CreatePage({ params }: { params: { contract: string; tok
 
   const { writeContract, data: txHash, error: writeErr, reset: resetWrite } = useWriteContract();
   const { isLoading: confirming, isSuccess } = useWaitForTransactionReceipt({ hash: txHash });
-
   useEffect(() => {
     if (writeErr) { setErr(writeErr.message.split("\n")[0]); setDeploying(false); setStep(""); }
   }, [writeErr]);
@@ -116,20 +132,11 @@ export default function CreatePage({ params }: { params: { contract: string; tok
     setDeploying(true); setErr(null); resetWrite();
     try {
       setStep("Generating museum site…");
-      const gen = await fetch("/api/generate", {
-        method: "POST", headers: { "content-type": "application/json" },
-        // Pass the NFT data we already fetched — skips the second OpenSea call (~10-20s saved)
-        body: JSON.stringify({ contract, tokenId, subdomain: slug, owner: address, xHandle, nft }),
-      }).then(r => r.json());
-      if (gen.error) throw new Error(gen.error);
+      const files = await buildMuseumFiles({ nft, contract, tokenId, subdomain: slug, owner: address, xHandle });
 
       setStep("Pinning to IPFS…");
-      const pin = await fetch("/api/pin", {
-        method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ files: gen.files, name: `${slug}.artid.eth` }),
-      }).then(r => r.json());
-      if (pin.error) throw new Error(pin.error);
-      setCid(pin.cid);
+      const { cid: pinnedCid, contenthash } = await pinSiteFolder(files, `${slug}.artid.eth`);
+      setCid(pinnedCid);
 
       if (chainId !== mainnet.id) {
         setStep("Switching to Ethereum mainnet…");
@@ -141,7 +148,7 @@ export default function CreatePage({ params }: { params: { contract: string; tok
       writeContract({
         chainId: mainnet.id,
         address: FORWARDER_ADDRESS, abi: FORWARDER_ABI, functionName: "register",
-        args: [slug, BigInt(donateYears), contract as `0x${string}`, BigInt(tokenId), pin.contenthash],
+        args: [slug, BigInt(donateYears), contract as `0x${string}`, BigInt(tokenId), contenthash],
         value: total,
         gas: gasUnits ? gasUnits + 80_000n : undefined,
         ...(fees?.maxFeePerGas ? {
@@ -154,7 +161,6 @@ export default function CreatePage({ params }: { params: { contract: string; tok
     }
   }
 
-  // Render guards
   if (!isConnected) return <CenteredMessage title="Please connect your wallet" />;
   if (nftErr) return <CenteredMessage title="Couldn't load NFT" body={nftErr} />;
   if (!nft) return <div className="p-24 text-center text-[#a89e85] font-display italic">Curating your selection…</div>;
@@ -214,23 +220,19 @@ export default function CreatePage({ params }: { params: { contract: string; tok
         </div>
 
         <div className="mt-6">
-          <div className="text-[10px] uppercase tracking-[0.32em] text-[#6a6151] mb-2">
-            X handle (optional)
-          </div>
+          <div className="text-[10px] uppercase tracking-[0.32em] text-[#6a6151] mb-2">X handle (optional)</div>
           <div className="flex items-center border border-charcoal-700 focus-within:border-gilded-400 transition bg-charcoal-900/40">
             <span className="px-3 text-[#5a5141] font-mono">@</span>
             <input
               type="text"
               value={xHandle}
               onChange={(e) => setXHandle(e.target.value.replace(/^@+/, "").replace(/[^A-Za-z0-9_]/g, "").slice(0, 15))}
-              placeholder="yourhandle"
-              maxLength={15}
+              placeholder="yourhandle" maxLength={15}
               className="flex-1 bg-transparent py-3 pr-3 font-mono text-sm text-[#ece4d2] outline-none"
             />
           </div>
           <p className="text-[11px] text-[#5a5141] mt-2 italic leading-snug">
             Featured under "Holder" in the museum's Creator card. Baked into the IPFS site — no extra transaction.
-            Leave blank to skip.
           </p>
         </div>
 
@@ -241,15 +243,11 @@ export default function CreatePage({ params }: { params: { contract: string; tok
           </div>
           <div className="grid grid-cols-5 gap-2">
             {DONATE_OPTIONS.map(y => (
-              <button
-                key={y}
-                onClick={() => setDonateYears(y)}
+              <button key={y} onClick={() => setDonateYears(y)}
                 className={`py-4 border font-display text-xl transition ${
-                  donateYears === y
-                    ? "border-gilded-300 bg-gilded-500/10 text-gilded-300"
-                    : "border-charcoal-700 text-[#a89e85] hover:border-gilded-500/40"
-                }`}
-              >
+                  donateYears === y ? "border-gilded-300 bg-gilded-500/10 text-gilded-300"
+                                   : "border-charcoal-700 text-[#a89e85] hover:border-gilded-500/40"
+                }`}>
                 {y === 0 ? "—" : `+${y}`}<span className="text-[10px] ml-1">{y === 0 ? "free" : `yr${y > 1 ? "s" : ""}`}</span>
               </button>
             ))}
@@ -257,7 +255,7 @@ export default function CreatePage({ params }: { params: { contract: string; tok
           {parentExpiry && expectedExpiry && (
             <p className="text-[11px] text-[#5a5141] mt-3 leading-snug italic">
               {donateYears === 0
-                ? <>Your subname will share artid.eth's current expiry: <span className="text-[#a89e85]">{new Date(Number(parentExpiry) * 1000).toLocaleDateString()}</span>. No donation — no charge.</>
+                ? <>Your subname will share artid.eth's current expiry: <span className="text-[#a89e85]">{new Date(Number(parentExpiry) * 1000).toLocaleDateString()}</span>.</>
                 : <>Pays the ENS DAO directly to extend artid.eth → new expiry for every museum: <span className="text-[#d8b977]">{expectedExpiry.toLocaleDateString()}</span></>
               }
             </p>
@@ -278,11 +276,8 @@ export default function CreatePage({ params }: { params: { contract: string; tok
           />
         </div>
 
-        <button
-          onClick={deploy}
-          disabled={deploying || !slug || donationPrice === undefined}
-          className="mt-8 w-full py-5 bg-gilded-500 text-charcoal-950 font-medium tracking-[0.3em] uppercase text-[11px] hover:bg-gilded-400 disabled:bg-charcoal-700 disabled:text-[#5a5141] transition shadow-gilded"
-        >
+        <button onClick={deploy} disabled={deploying || !slug || donationPrice === undefined}
+          className="mt-8 w-full py-5 bg-gilded-500 text-charcoal-950 font-medium tracking-[0.3em] uppercase text-[11px] hover:bg-gilded-400 disabled:bg-charcoal-700 disabled:text-[#5a5141] transition shadow-gilded">
           {confirming ? "Confirming on-chain…" : deploying ? step : total === 0n ? "Mint passport (gas only)" : "Mint passport"}
         </button>
         {txHash && (
@@ -306,10 +301,8 @@ export default function CreatePage({ params }: { params: { contract: string; tok
       <div>
         <div className="text-[10px] uppercase tracking-[0.32em] text-[#6a6151] mb-3">Live museum preview</div>
         <div className="overflow-hidden bg-charcoal-900" style={{ aspectRatio: "9/14", boxShadow: "inset 0 0 0 1px rgba(200,163,90,0.18)" }}>
-          {slug ? (
-            <iframe key={`${contract}-${tokenId}-${slug}-${xHandle}`}
-              src={`/api/preview?contract=${contract}&tokenId=${tokenId}&subdomain=${slug}${xHandle ? `&x=${encodeURIComponent(xHandle)}` : ""}`}
-              className="w-full h-full" title={`${slug} museum preview`} />
+          {previewSrcDoc ? (
+            <iframe srcDoc={previewSrcDoc} className="w-full h-full" title={`${slug} museum preview`} sandbox="allow-scripts" />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-[#5a5141] italic">loading preview…</div>
           )}
@@ -355,32 +348,23 @@ function PriceBreakdown({
     <>
       <div className="flex flex-col gap-3.5">
         <Row label="Platform fee" val={formatEthAndUsd(platformFee, usdPerEth)} />
-        <Row
-          label={donateYears === 0 ? "Donation to artid.eth" : `Donate ${donateYears} yr${donateYears > 1 ? "s" : ""} to artid.eth (ENS DAO)`}
-          val={formatEthAndUsd(donation, usdPerEth)}
-        />
+        <Row label={donateYears === 0 ? "Donation to artid.eth" : `Donate ${donateYears} yr${donateYears > 1 ? "s" : ""} (ENS DAO)`}
+             val={formatEthAndUsd(donation, usdPerEth)} />
         {artistFee > 0n && <Row label="Artist fee" val={formatEthAndUsd(artistFee, usdPerEth)} />}
         <Row label={`Network gas (est. ${gasUnits ? Number(gasUnits).toLocaleString() : "…"} units)`} val={formatEthAndUsd(gasCostWei, usdPerEth)} />
       </div>
-
       <div className="h-px my-7"
-        style={{ background: "linear-gradient(90deg, transparent, rgba(200,163,90,0.18) 15%, rgba(200,163,90,0.18) 85%, transparent)" }}
-      />
-
+        style={{ background: "linear-gradient(90deg, transparent, rgba(200,163,90,0.18) 15%, rgba(200,163,90,0.18) 85%, transparent)" }} />
       <div className="grid grid-cols-[1fr_auto] items-end gap-6">
-        <div className="font-display italic font-light text-sm tracking-[0.42em] uppercase text-gilded-300">
-          Total to send
-        </div>
+        <div className="font-display italic font-light text-sm tracking-[0.42em] uppercase text-gilded-300">Total to send</div>
         <div className="text-right">
-          <div
-            className="font-display font-light leading-[0.95] tracking-[-0.04em] text-[clamp(48px,7vw,84px)]"
+          <div className="font-display font-light leading-[0.95] tracking-[-0.04em] text-[clamp(48px,7vw,84px)]"
             style={{
               fontFeatureSettings: '"tnum" 1, "lnum" 1',
               background: "linear-gradient(180deg, #f0d989 0%, #d8b977 45%, #c8a35a 100%)",
               WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent",
               textShadow: "0 0 60px rgba(200,163,90,0.15)",
-            }}
-          >
+            }}>
             {totalNum.toFixed(5)}
             <span className="text-[0.36em] italic ml-2" style={{ letterSpacing: "0.04em" }}>ETH</span>
           </div>
@@ -389,10 +373,9 @@ function PriceBreakdown({
           )}
         </div>
       </div>
-
       {maxFeePerGas && (
         <p className="text-[10px] text-[#5a5141] mt-6 leading-snug">
-          Donation flows directly to the ENS DAO at the live oracle rate. ArtID takes nothing.
+          Donation flows directly to the ENS DAO at the live oracle rate.
           On-chain gas at {(Number(maxFeePerGas) / 1e9).toFixed(2)} gwei.
         </p>
       )}

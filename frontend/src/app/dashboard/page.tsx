@@ -3,18 +3,11 @@ import { useAccount } from "wagmi";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-
-type Nft = {
-  contract: string;
-  identifier: string;
-  name: string | null;
-  display_image_url: string | null;
-  collection: string | null;
-};
+import { fetchWalletNfts, type OpenSeaNft } from "@/lib/opensea";
 
 export default function Dashboard() {
   const { address, isConnected } = useAccount();
-  const [nfts, setNfts] = useState<Nft[]>([]);
+  const [nfts, setNfts] = useState<OpenSeaNft[]>([]);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -22,12 +15,8 @@ export default function Dashboard() {
     if (!address) return;
     setLoading(true);
     setErr(null);
-    fetch(`/api/nfts/${address}`)
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.error) throw new Error(d.error);
-        setNfts(d.nfts || []);
-      })
+    fetchWalletNfts(address)
+      .then(setNfts)
       .catch((e) => setErr(String(e.message || e)))
       .finally(() => setLoading(false));
   }, [address]);
@@ -102,7 +91,7 @@ export default function Dashboard() {
   );
 }
 
-function NftCard({ nft, index }: { nft: Nft; index: number }) {
+function NftCard({ nft, index }: { nft: OpenSeaNft; index: number }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
@@ -111,7 +100,7 @@ function NftCard({ nft, index }: { nft: Nft; index: number }) {
       className="group"
     >
       <Link
-        href={`/create/${nft.contract}/${nft.identifier}`}
+        href={`/create?c=${nft.contract}&t=${nft.identifier}`}
         className="block"
       >
         {/* Frame */}

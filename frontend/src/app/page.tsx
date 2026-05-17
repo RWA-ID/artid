@@ -170,7 +170,7 @@ type TrendingNft = { contract: string; identifier: string; name: string; image: 
 function GalleryWall() {
   const [nfts, setNfts] = useState<TrendingNft[]>([]);
   useEffect(() => {
-    fetch("/api/trending").then(r => r.json()).then(d => setNfts(d.nfts || [])).catch(() => {});
+    import("@/lib/opensea").then(m => m.fetchTrendingFrames()).then(setNfts).catch(() => {});
   }, []);
 
   const slots = [
@@ -187,7 +187,7 @@ function GalleryWall() {
         const nft = picks[i];
         return (
           <motion.a key={i}
-            href={nft ? `/create/${nft.contract}/${nft.identifier}` : undefined}
+            href={nft ? `/create?c=${nft.contract}&t=${nft.identifier}` : undefined}
             initial={{ opacity: 0, y: 30, scale: 0.96 }}
             animate={{ opacity: nft ? 1 : 0.28, y: 0, scale: 1 }}
             transition={{ duration: 1.4, delay: 0.5 + i * 0.2, ease: [0.2, 0.7, 0.2, 1] }}
@@ -424,7 +424,7 @@ function Tile({ nft, index }: { nft: TrendingNft | null; index: number }) {
     );
   }
   return (
-    <motion.a href={`/create/${nft.contract}/${nft.identifier}`}
+    <motion.a href={`/create?c=${nft.contract}&t=${nft.identifier}`}
       initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
       transition={{ duration: 0.7, delay: index * 0.04, ease: [0.2, 0.7, 0.2, 1] }}
       className="group relative overflow-hidden cursor-pointer block"

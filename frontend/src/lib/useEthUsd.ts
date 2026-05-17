@@ -6,9 +6,9 @@ export function useEthUsd() {
   const [usd, setUsd] = useState<number | null>(null);
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/ethprice")
+    fetch("https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd")
       .then(r => r.json())
-      .then(d => { if (!cancelled) setUsd(d.usd ?? null); })
+      .then(d => { if (!cancelled) setUsd(d?.ethereum?.usd ?? null); })
       .catch(() => {});
     return () => { cancelled = true; };
   }, []);
