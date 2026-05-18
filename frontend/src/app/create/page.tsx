@@ -127,6 +127,18 @@ function CreatePage() {
     if (writeErr) { setErr(writeErr.message.split("\n")[0]); setDeploying(false); setStep(""); }
   }, [writeErr]);
 
+  const isEmbed = sp.get("embed") === "1";
+  useEffect(() => {
+    if (isSuccess && isEmbed && typeof window !== "undefined" && window.parent !== window) {
+      try {
+        window.parent.postMessage(
+          { type: "artid:registered", subdomain: `${slug}.artid.eth`, slug, txHash, cid },
+          "*"
+        );
+      } catch {}
+    }
+  }, [isSuccess, isEmbed, slug, txHash, cid]);
+
   async function deploy() {
     if (!nft || !slug || !address || donationPrice === undefined) return;
     setDeploying(true); setErr(null); resetWrite();
@@ -192,9 +204,26 @@ function CreatePage() {
           </div>
         )}
         <p className="mt-6 text-xs text-[#5a5141] font-mono">IPFS · {cid}</p>
-        <Link href="/museums" className="mt-12 inline-block px-6 py-3 border border-gilded-500/40 hover:border-gilded-300 text-[11px] tracking-[0.3em] uppercase">
-          View all museums
-        </Link>
+        <div className="mt-12 flex flex-wrap justify-center items-center gap-3">
+          <a
+            href={`https://twitter.com/intent/tweet?${new URLSearchParams({
+              text: `Just inaugurated my museum at ${slug}.artid.eth — a permanent IPFS gallery for ${nft?.name || `#${tokenId}`}. Mint your own at`,
+              url: `https://${slug}.artid.eth.link`,
+              hashtags: "artid,ENS",
+            }).toString()}`}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-gilded-500 text-charcoal-950 font-medium tracking-[0.3em] uppercase text-[11px] hover:bg-gilded-400 transition shadow-gilded"
+          >
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true">
+              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+            </svg>
+            Share on X
+          </a>
+          <Link href="/museums" className="inline-block px-6 py-3 border border-gilded-500/40 hover:border-gilded-300 text-[11px] tracking-[0.3em] uppercase">
+            View all museums
+          </Link>
+        </div>
       </div>
     );
   }

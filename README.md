@@ -21,6 +21,130 @@ The collector owns the gallery. The artist earns a share of every mint. The plat
 
 ---
 
+## Artist integration
+
+> **For NFT collection owners.** Earn from every museum minted under your contract — automatic, on-chain, no portal or signer to maintain.
+
+The forwarder reads your payout terms at mint time and routes part of every transaction to your treasury. You set the terms once and update them whenever you want. Collectors mint as normal — through your embed *or* anywhere else on ArtID — and your share is paid in the same transaction.
+
+### How payment splits
+
+When a collector pays to mint a museum for one of your NFTs:
+
+```
+                                  ┌─→  Platform fee   →  ArtID treasury (0.0075 ETH fixed)
+collector pays total  ──→ forwarder ─→  Artist fee    →  your treasury  (you choose, max 0.05 ETH)
+                                  └─→  Registration   →  ENS DAO        (0.008 ETH per year donated)
+```
+
+All three legs settle atomically. If your treasury reverts, the whole tx reverts — collectors are never charged for a broken treasury, and you never miss a payment.
+
+### Three steps to integrate
+
+**1. Verify ownership** — visit [artid.eth.link/integrate](https://artid.eth.link/integrate), connect the wallet that owns your collection contract. The page reads `Ownable.owner()` or `AccessControl.hasRole(DEFAULT_ADMIN_ROLE, you)` — no gas, no signature.
+
+**2. Set terms on-chain** — one transaction to `ArtIDForwarder.setArtistTerms(collection, treasury, fee)`:
+
+```solidity
+forwarder.setArtistTerms(
+  0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D,  // your collection contract
+  0xYourTreasury,                                // where the fee lands
+  0.0025 ether                                   // per-mint fee (max 0.05)
+);
+```
+
+Update or clear anytime by calling `setArtistTerms` again or `clearArtistTerms(collection)`. The forwarder always reads the latest values on every mint.
+
+**3. Embed the widget** — drop a script tag (or React component) into your collection's site so visitors can mint a passport for any NFT they own from your collection.
+
+### Embedding the widget
+
+**Vanilla HTML** — script tag from the CDN:
+
+```html
+<script src="https://artid.eth.link/widget.js"
+  data-collection="0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D"
+  defer></script>
+```
+
+Drop that anywhere on your page and a gilded "Mint Museum Passport" button renders inline. Click → modal with the full mint flow.
+
+Or place a positioned slot with the placeholder div:
+
+```html
+<div data-artid-widget data-collection="0xBC4..."></div>
+```
+
+**React** — install [`@artidv1/react`](https://www.npmjs.com/package/@artidv1/react):
+
+```bash
+npm i @artidv1/react
+```
+
+```tsx
+import { ArtIDWidget } from "@artidv1/react";
+
+export function CollectionPage() {
+  return (
+    <ArtIDWidget
+      collection="0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D"
+      onRegistered={(e) => console.log("Museum minted:", e.subdomain, e.txHash)}
+    />
+  );
+}
+```
+
+**Imperative** — `useArtID()` hook if you want your own button:
+
+```tsx
+import { useArtID } from "@artidv1/react";
+
+const { open } = useArtID();
+<button onClick={() => open({ collection: "0xBC4..." })}>Open ArtID</button>;
+```
+
+### Widget configuration
+
+| Attribute / prop | Required | Description |
+|---|---|---|
+| `data-collection` / `collection` | yes | Your NFT collection contract address |
+| `data-token-id` / `tokenId` | no | Pre-select a specific token; omit to open the visitor's gallery filtered to your collection |
+| `data-label` / `label` | no | Button text (default: "Mint Museum Passport") |
+| `data-host` / `host` | no | Override the dApp host (default: `https://artid.eth.link`) |
+
+### Listening to mints
+
+Both packages dispatch a `window` event when a museum is registered:
+
+```js
+window.addEventListener("artid:registered", (e) => {
+  // e.detail = { subdomain, slug, txHash, cid }
+  trackEvent("museum_minted", e.detail);
+});
+```
+
+In React, the same data is delivered through `onRegistered`.
+
+### Self-hosting the script
+
+If you'd rather not depend on `artid.eth.link`, the widget bundle is published at [`@artidv1/widget`](https://www.npmjs.com/package/@artidv1/widget) — pull `dist/widget.js` (~6 KB minified, zero dependencies) and serve it from your own CDN. The modal still iframes the live ArtID dApp, so the mint flow stays canonical.
+
+### Updating or revoking terms
+
+From the same wallet that originally set them:
+
+```solidity
+// Update — same function, new values
+forwarder.setArtistTerms(collection, newTreasury, newFee);
+
+// Revoke — collectors can still mint, just no artist payout
+forwarder.clearArtistTerms(collection);
+```
+
+No re-deployment, no signature re-issuance, no embed code change. The widget reads the chain on every mint.
+
+---
+
 ## Live mainnet contracts
 
 | Contract | Address |

@@ -27,11 +27,12 @@ export default function Integrate() {
 
   const [treasury, setTreasury] = useState("");
   const [feeEth, setFeeEth] = useState("0.0025");
+  const [tab, setTab] = useState<"html" | "react">("html");
+  const [copied, setCopied] = useState(false);
 
   const { writeContract, data: txHash, error: writeErr, reset } = useWriteContract();
   const { isLoading: confirming, isSuccess } = useWaitForTransactionReceipt({ hash: txHash });
 
-  // Read existing terms for this collection (so artist sees what's already on-chain)
   const { data: existing, refetch: refetchTerms } = useReadContract({
     address: FORWARDER_ADDRESS,
     abi: FORWARDER_ABI,
@@ -97,128 +98,283 @@ export default function Integrate() {
   }
 
   if (!isConnected) {
-    return <div className="max-w-2xl mx-auto px-6 py-24 text-center">
-      <h1 className="font-display text-5xl gilded-text">Artists, sign in</h1>
-      <p className="mt-4 text-[#a89e85]">Connect the wallet that owns your NFT collection contract.</p>
-    </div>;
+    return (
+      <div className="max-w-2xl mx-auto px-7 py-32 text-center">
+        <p className="text-[11px] tracking-[0.42em] uppercase text-[#c8a35a]/70">— For collection owners —</p>
+        <h1 className="font-display italic font-light text-[clamp(48px,6vw,72px)] leading-[1.05] text-[#ece4d2] mt-6">
+          Connect the wallet that controls your collection.
+        </h1>
+        <p className="mt-8 max-w-xl mx-auto text-[14px] leading-[1.7] text-[#a89e85]">
+          Earn from every museum minted under your NFTs — automatic, on-chain, no portal to maintain.
+        </p>
+      </div>
+    );
   }
 
   const embedHtml = isAddress(collection) ? `<!-- ArtID widget for your collection -->
-<script src="https://cdn.artid.eth/widget.js"
-  data-collection="${getAddress(collection)}"></script>` : "";
+<script src="https://artid.eth.link/widget.js"
+  data-collection="${getAddress(collection)}"
+  defer></script>
 
-  const embedReact = isAddress(collection) ? `import { ArtIDWidget } from "@artid/react";
+<!-- Optional: place the button anywhere with a placeholder div -->
+<!-- <div data-artid-widget data-collection="${getAddress(collection)}"></div> -->` : "";
 
-<ArtIDWidget collection="${getAddress(collection)}" />` : "";
+  const embedReact = isAddress(collection) ? `import { ArtIDWidget } from "@artidv1/react";
 
-  const [tab, setTab] = useState<"html" | "react">("html");
+<ArtIDWidget
+  collection="${getAddress(collection)}"
+  onRegistered={(e) => console.log("Museum minted:", e.subdomain)}
+/>` : "";
+
   const existingActive = existing && (existing as any)[2];
   const existingFee = existing && (existing as any)[1] as bigint;
   const existingTreasury = existing && (existing as any)[0] as string;
 
-  return (
-    <div className="max-w-3xl mx-auto px-6 py-12">
-      <h1 className="font-display text-5xl gilded-text">Integrate ArtID</h1>
-      <p className="mt-4 text-[#a89e85]">
-        Embed a museum-mint button on your collection's site. Collectors mint inline; the on-chain forwarder pays your treasury on every mint.
-      </p>
+  function copy(text: string) {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
 
-      <section className="mt-10 gilded-frame p-6">
-        <h2 className="font-display text-2xl">1 — Verify ownership</h2>
-        <input
-          value={collection}
-          onChange={(e) => { setCollection(e.target.value); setVerified(null); }}
-          placeholder="0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D"
-          className="mt-4 w-full bg-charcoal-900 border border-charcoal-700 px-4 py-3 font-mono text-sm focus:border-gilded-400 outline-none"
-        />
-        <button
-          onClick={verify}
-          disabled={!isAddress(collection) || verifying}
-          className="mt-4 px-6 py-2 border border-gilded-500/40 hover:border-gilded-300 disabled:opacity-50"
-        >
-          {verifying ? "Checking…" : "Verify on-chain ownership"}
-        </button>
-        {verifyErr && <p className="mt-3 text-sm text-red-400">{verifyErr}</p>}
-        {verified === "ok" && <p className="mt-3 text-sm text-green-400">✓ Verified. You control this collection.</p>}
-        {verified === "manual" && (
-          <p className="mt-3 text-sm text-yellow-400">
-            Couldn't auto-verify. Your contract must expose Ownable.owner() or AccessControl.hasRole(DEFAULT_ADMIN_ROLE, you).
-          </p>
-        )}
-        {existingActive && (
-          <p className="mt-3 text-sm text-[#a89e85]">
-            Existing on-chain terms: <span className="text-gilded-300">{formatEther(existingFee || 0n)} ETH</span> →{" "}
-            <span className="font-mono text-xs">{existingTreasury}</span>
-          </p>
-        )}
+  return (
+    <div className="relative bg-[#0a0908] text-[#ece4d2] min-h-screen">
+      {/* ── Hero ─────────────────────────────────────────────── */}
+      <section className="max-w-[1200px] mx-auto px-7 pt-20 pb-10">
+        <p className="text-[11px] tracking-[0.42em] uppercase text-[#c8a35a]/70">— For collection owners —</p>
+        <h1 className="font-display font-normal text-[clamp(48px,6vw,80px)] leading-[0.98] tracking-[-0.025em] mt-5">
+          Earn from every <span className="italic font-light text-[#d8b977]">museum</span><br />
+          minted under your collection.
+        </h1>
+        <p className="mt-7 max-w-2xl text-[15px] leading-[1.75] text-[#b8aa8e]">
+          Set on-chain payout terms once. Any collector who mints a museum passport for an NFT in your collection
+          will route a fee straight to your treasury — in the same transaction, with no signature, no manual approval, no portal to maintain.
+          The forwarder reads your terms live on every mint.
+        </p>
+        <div className="h-px mt-12" style={{ background: "linear-gradient(90deg, transparent, rgba(200,163,90,0.22) 12%, rgba(200,163,90,0.22) 88%, transparent)" }} />
       </section>
 
-      {verified === "ok" && (
-        <section className="mt-6 gilded-frame p-6">
-          <h2 className="font-display text-2xl">2 — Set payout terms (on-chain)</h2>
-
-          <label className="block mt-4 text-xs uppercase tracking-widest text-[#8a8068]">Artist treasury</label>
-          <input
-            value={treasury}
-            onChange={(e) => setTreasury(e.target.value)}
-            className="mt-1 w-full bg-charcoal-900 border border-charcoal-700 px-4 py-3 font-mono text-sm focus:border-gilded-400 outline-none"
+      {/* ── How it works ─────────────────────────────────────── */}
+      <section className="max-w-[1200px] mx-auto px-7 pb-4">
+        <p className="text-[11px] tracking-[0.32em] uppercase text-[#6a6151] mb-8">How it works</p>
+        <div className="grid md:grid-cols-3 gap-[18px]">
+          <PrimerCard
+            n="01"
+            title="Prove ownership"
+            body={
+              <>The page reads <span className="font-mono text-[#a89e85]">Ownable.owner()</span> (or{" "}
+              <span className="font-mono text-[#a89e85]">AccessControl.DEFAULT_ADMIN_ROLE</span>) on your collection. Zero gas.</>
+            }
           />
-
-          <label className="block mt-4 text-xs uppercase tracking-widest text-[#8a8068]">Artist fee (ETH) — max 0.05</label>
-          <input
-            type="number" step="0.0001" min="0" max="0.05"
-            value={feeEth}
-            onChange={(e) => setFeeEth(e.target.value)}
-            className="mt-1 w-full bg-charcoal-900 border border-charcoal-700 px-4 py-3 font-mono text-sm focus:border-gilded-400 outline-none"
+          <PrimerCard
+            n="02"
+            title="Set terms on-chain"
+            body={
+              <>One tx writes <span className="font-mono text-[#a89e85]">(treasury, fee)</span> to the forwarder.
+              Max fee 0.05 ETH. Update or clear anytime from the same wallet.</>
+            }
           />
+          <PrimerCard
+            n="03"
+            title="Earn automatically"
+            body={
+              <>Every mint of an NFT in your collection — through your embed or anywhere else —
+              splits payment three ways: platform · ENS DAO donation · <span className="text-[#d8b977]">you</span>.</>
+            }
+          />
+        </div>
+      </section>
 
-          <p className="mt-3 text-xs text-[#5a5141]">
-            One on-chain tx. You can update or clear these terms at any time from the same wallet.
-          </p>
-
-          <div className="mt-6 flex gap-3">
+      {/* ── Step 1 ───────────────────────────────────────────── */}
+      <section className="max-w-[1200px] mx-auto px-7 pt-16">
+        <Step n="1" eyebrow="The contract you control" title="Verify ownership">
+          <div className="mt-6 relative">
+            <input
+              value={collection}
+              onChange={(e) => { setCollection(e.target.value); setVerified(null); }}
+              placeholder="0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D"
+              className="w-full bg-[#100e0c] border border-[rgba(200,163,90,0.18)] focus:border-[#c8a35a] px-5 py-4 font-mono text-[13px] text-[#ece4d2] outline-none transition"
+            />
+          </div>
+          <div className="mt-4 flex items-center gap-4 flex-wrap">
             <button
-              onClick={submit}
-              disabled={confirming || !isAddress(treasury) || Number(feeEth) < 0 || Number(feeEth) > 0.05}
-              className="flex-1 py-3 bg-gilded-500 text-charcoal-950 font-medium hover:bg-gilded-400 disabled:bg-charcoal-700 disabled:text-[#5a5141]"
+              onClick={verify}
+              disabled={!isAddress(collection) || verifying}
+              className="px-7 py-3 border border-[rgba(200,163,90,0.4)] hover:border-[#c8a35a] hover:bg-[rgba(200,163,90,0.05)] hover:text-[#d8b977] text-[11px] tracking-[0.3em] uppercase text-[#c8a35a] disabled:opacity-30 disabled:hover:bg-transparent transition"
             >
-              {confirming ? "Confirming…" : isSuccess ? "✓ Terms saved" : existingActive ? "Update terms" : "Set terms"}
+              {verifying ? "Checking…" : "Verify ownership"}
             </button>
-            {existingActive && (
-              <button
-                onClick={clear}
-                disabled={confirming}
-                className="px-5 py-3 border border-red-500/40 text-red-400 hover:border-red-400"
-              >
-                Clear
-              </button>
+            {verified === "ok" && (
+              <span className="inline-flex items-center gap-2 text-[11px] tracking-[0.2em] uppercase text-[#86c878]">
+                <Dot color="#86c878" /> Verified
+              </span>
+            )}
+            {verified === "manual" && (
+              <span className="inline-flex items-center gap-2 text-[11px] tracking-[0.2em] uppercase text-[#e2b96e]">
+                <Dot color="#e2b96e" /> Couldn't auto-verify
+              </span>
             )}
           </div>
-          {writeErr && <p className="mt-3 text-sm text-red-400">{writeErr.message}</p>}
+          {verifyErr && <p className="mt-4 text-[12px] text-red-400/90">{verifyErr}</p>}
+          {verified === "manual" && (
+            <p className="mt-3 text-[12px] text-[#8a8068] italic leading-snug max-w-xl">
+              Your contract needs <span className="font-mono text-[#a89e85]">owner()</span> (Ownable) or{" "}
+              <span className="font-mono text-[#a89e85]">hasRole(DEFAULT_ADMIN_ROLE, you)</span> (AccessControl).
+              If neither applies, reach out for manual verification.
+            </p>
+          )}
+          {existingActive && (
+            <div className="mt-6 border border-[rgba(200,163,90,0.18)] bg-[#100e0c] p-5">
+              <p className="text-[10px] tracking-[0.32em] uppercase text-[#6a6151] mb-2">Existing on-chain terms</p>
+              <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2">
+                <span className="font-display italic text-[24px] text-[#d8b977]">{formatEther(existingFee || 0n)} ETH</span>
+                <span className="text-[12px] text-[#8a8068]">→</span>
+                <span className="font-mono text-[12px] text-[#a89e85] break-all">{existingTreasury}</span>
+              </div>
+            </div>
+          )}
+        </Step>
+      </section>
+
+      {/* ── Step 2 ───────────────────────────────────────────── */}
+      {verified === "ok" && (
+        <section className="max-w-[1200px] mx-auto px-7 pt-14">
+          <Step n="2" eyebrow="Where the artist fee lands" title="Payout terms">
+            <div className="mt-6 grid md:grid-cols-2 gap-5">
+              <Field label="Artist treasury" hint="Defaults to your wallet">
+                <input
+                  value={treasury}
+                  onChange={(e) => setTreasury(e.target.value)}
+                  placeholder="0x…"
+                  className="w-full bg-[#100e0c] border border-[rgba(200,163,90,0.18)] focus:border-[#c8a35a] px-5 py-4 font-mono text-[13px] text-[#ece4d2] outline-none transition"
+                />
+              </Field>
+              <Field label="Artist fee" hint="Max 0.05 ETH per mint">
+                <div className="flex items-center bg-[#100e0c] border border-[rgba(200,163,90,0.18)] focus-within:border-[#c8a35a] transition">
+                  <input
+                    type="number" step="0.0001" min="0" max="0.05"
+                    value={feeEth}
+                    onChange={(e) => setFeeEth(e.target.value)}
+                    className="flex-1 bg-transparent px-5 py-4 font-mono text-[13px] text-[#ece4d2] outline-none"
+                  />
+                  <span className="pr-5 text-[11px] tracking-[0.32em] uppercase text-[#6a6151]">ETH</span>
+                </div>
+              </Field>
+            </div>
+
+            <p className="mt-5 text-[12px] text-[#8a8068] italic leading-snug max-w-xl">
+              One on-chain transaction. You can update or clear these terms anytime from the same wallet — the forwarder always reads the latest values at mint time.
+            </p>
+
+            <div className="mt-7 flex items-center gap-3 flex-wrap">
+              <button
+                onClick={submit}
+                disabled={confirming || !isAddress(treasury) || Number(feeEth) < 0 || Number(feeEth) > 0.05}
+                className="px-9 py-3.5 bg-gradient-to-b from-[#f0d989] via-[#d8b977] to-[#c8a35a] text-[#0a0908] font-medium tracking-[0.3em] uppercase text-[11px] hover:from-[#f4e09e] hover:to-[#d2ae65] disabled:from-[#3a3429] disabled:to-[#2a261e] disabled:text-[#5a5141] transition shadow-[0_8px_24px_rgba(200,163,90,0.25),inset_0_1px_0_rgba(255,255,255,0.3)]"
+              >
+                {confirming ? "Confirming…" : isSuccess ? "✓ Terms saved" : existingActive ? "Update terms" : "Set terms"}
+              </button>
+              {existingActive && (
+                <button
+                  onClick={clear}
+                  disabled={confirming}
+                  className="px-7 py-3.5 border border-red-400/30 text-red-400/90 hover:border-red-400/60 hover:bg-red-500/5 text-[11px] tracking-[0.3em] uppercase transition disabled:opacity-30"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            {writeErr && (
+              <div className="mt-5 p-3 border border-red-500/30 bg-red-500/5 text-[12px] text-red-400/90 max-w-2xl break-words">
+                {writeErr.message.split("\n")[0]}
+              </div>
+            )}
+          </Step>
         </section>
       )}
 
+      {/* ── Step 3 ───────────────────────────────────────────── */}
       {existingActive && (
-        <section className="mt-6 gilded-frame p-6">
-          <h2 className="font-display text-2xl">3 — Embed</h2>
-          <div className="flex gap-2 mt-4">
-            <button onClick={() => setTab("html")} className={`px-3 py-1 text-sm ${tab === "html" ? "bg-gilded-500/20 text-gilded-300" : "text-[#8a8068]"}`}>HTML</button>
-            <button onClick={() => setTab("react")} className={`px-3 py-1 text-sm ${tab === "react" ? "bg-gilded-500/20 text-gilded-300" : "text-[#8a8068]"}`}>React</button>
-          </div>
-          <pre className="mt-3 bg-charcoal-900 border border-charcoal-700 p-4 text-xs overflow-x-auto font-mono">
-{tab === "html" ? embedHtml : embedReact}
-          </pre>
-          <button
-            onClick={() => navigator.clipboard.writeText(tab === "html" ? embedHtml : embedReact)}
-            className="mt-3 px-4 py-2 text-sm border border-gilded-500/40 hover:border-gilded-300"
-          >
-            Copy to clipboard
-          </button>
-          <p className="mt-4 text-xs text-[#5a5141]">
-            The widget reads your terms from the forwarder on every mint — no signature, no expiry. Update them anytime.
-          </p>
+        <section className="max-w-[1200px] mx-auto px-7 pt-14 pb-32">
+          <Step n="3" eyebrow="Drop into your collection's site" title="Embed the widget">
+            <div className="mt-6 inline-flex border-b border-[rgba(200,163,90,0.18)]">
+              <TabBtn active={tab === "html"} onClick={() => setTab("html")}>HTML</TabBtn>
+              <TabBtn active={tab === "react"} onClick={() => setTab("react")}>React</TabBtn>
+            </div>
+            <pre className="mt-4 relative bg-[#100e0c] border border-[rgba(200,163,90,0.18)] p-6 text-[12.5px] leading-[1.7] overflow-x-auto font-mono text-[#cdc3a8]">
+              <code>{tab === "html" ? embedHtml : embedReact}</code>
+            </pre>
+            <div className="mt-4 flex items-center gap-4 flex-wrap">
+              <button
+                onClick={() => copy(tab === "html" ? embedHtml : embedReact)}
+                className="px-7 py-3 border border-[rgba(200,163,90,0.4)] hover:border-[#c8a35a] hover:text-[#d8b977] text-[11px] tracking-[0.3em] uppercase text-[#c8a35a] transition"
+              >
+                {copied ? "Copied ✓" : "Copy snippet"}
+              </button>
+              {tab === "react" && (
+                <code className="text-[11px] text-[#6a6151]">npm i @artidv1/react</code>
+              )}
+            </div>
+            <p className="mt-6 text-[12px] text-[#8a8068] italic leading-snug max-w-2xl">
+              The widget opens an iframe modal. Every mint reads your terms on-chain — you don't need to redeploy or regenerate anything when you change the fee.
+            </p>
+          </Step>
         </section>
       )}
     </div>
   );
+}
+
+/* ── Primitives ─────────────────────────────────────────────── */
+
+function PrimerCard({ n, title, body }: { n: string; title: string; body: React.ReactNode }) {
+  return (
+    <div className="border border-[rgba(200,163,90,0.14)] bg-[#100e0c] p-7 hover:border-[rgba(200,163,90,0.32)] transition">
+      <div className="font-display italic text-[#c8a35a] text-[32px] leading-none mb-4">{n}</div>
+      <div className="font-display text-[22px] text-[#ece4d2] mb-3 tracking-[-0.01em]">{title}</div>
+      <div className="text-[13px] text-[#a89e85] leading-[1.65]">{body}</div>
+    </div>
+  );
+}
+
+function Step({ n, eyebrow, title, children }: { n: string; eyebrow: string; title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="flex items-baseline gap-5 mb-2">
+        <span className="font-display italic text-[#c8a35a]/70 text-[28px] leading-none">{n}.</span>
+        <p className="text-[11px] tracking-[0.42em] uppercase text-[#c8a35a]/70">— {eyebrow} —</p>
+      </div>
+      <h2 className="font-display font-normal text-[clamp(32px,4vw,48px)] leading-[1.05] tracking-[-0.02em] text-[#ece4d2]">{title}</h2>
+      {children}
+    </div>
+  );
+}
+
+function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="flex items-baseline justify-between mb-2">
+        <label className="text-[10px] tracking-[0.32em] uppercase text-[#6a6151]">{label}</label>
+        {hint && <span className="text-[11px] text-[#5a5141] italic">{hint}</span>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function TabBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`px-5 py-2.5 text-[11px] tracking-[0.3em] uppercase transition relative ${
+        active ? "text-[#d8b977]" : "text-[#6a6151] hover:text-[#a89e85]"
+      }`}
+    >
+      {children}
+      {active && <span className="absolute left-0 right-0 -bottom-px h-px bg-[#c8a35a]" />}
+    </button>
+  );
+}
+
+function Dot({ color }: { color: string }) {
+  return <span className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />;
 }

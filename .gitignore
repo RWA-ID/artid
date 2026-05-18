@@ -11,3 +11,5 @@ contracts/artifacts/
 contracts/typechain-types/
 contracts/coverage/
 contracts/.env.bak
+frontend/.env.bak
+packages/*/dist/

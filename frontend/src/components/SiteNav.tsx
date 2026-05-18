@@ -104,6 +104,14 @@ function ConnectChipInner() {
 }
 
 export function SiteNav() {
+  const [embedded, setEmbedded] = useState(false);
+  useEffect(() => {
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      setEmbedded(sp.get("embed") === "1");
+    } catch {}
+  }, []);
+  if (embedded) return null;
   return (
     <nav className="border-b border-[rgba(200,163,90,0.08)] bg-[#0a0908]/90 backdrop-blur sticky top-0 z-40">
       <div className="max-w-[1200px] mx-auto px-7 py-5 flex items-center justify-between">

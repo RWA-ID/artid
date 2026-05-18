@@ -4,6 +4,8 @@ import { useAccount } from "wagmi";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { motion, useScroll, useTransform, useReducedMotion } from "framer-motion";
+import { fetchRecentRegistered } from "@/lib/registry-events";
+import { fetchNft } from "@/lib/opensea";
 
 /* ═══════════════════════════════════════════════════════════════
    ArtID Landing — v2
@@ -83,6 +85,7 @@ export default function Home() {
       <Manifesto reduced={!!reduced} />
       <Process />
       <Audiences />
+      <RecentlyInaugurated />
       <Trending />
       <Footer />
     </div>
@@ -379,16 +382,132 @@ function Audiences() {
 
 
 /* ════════════════════════════════════════════════════════════════
+   RECENTLY INAUGURATED — real on-chain mints, image from OpenSea
+   ════════════════════════════════════════════════════════════════ */
+
+type Inaugural = {
+  label: string;
+  nftContract: string;
+  tokenId: string;
+  image: string | null;
+  name: string | null;
+};
+
+function RecentlyInaugurated() {
+  const [items, setItems] = useState<Inaugural[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const events = await fetchRecentRegistered(8);
+        const enriched = await Promise.all(
+          events.map(async (e) => {
+            const nft = await fetchNft(e.nftContract, e.tokenId.toString()).catch(() => null);
+            return {
+              label: e.label,
+              nftContract: e.nftContract,
+              tokenId: e.tokenId.toString(),
+              image: nft?.display_image_url || nft?.image_url || null,
+              name: nft?.name ?? null,
+            };
+          })
+        );
+        if (!cancelled) {
+          setItems(enriched);
+          setLoaded(true);
+        }
+      } catch {
+        if (!cancelled) setLoaded(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  if (loaded && items.length === 0) return null;
+
+  const tiles: (Inaugural | null)[] = items.length
+    ? items
+    : Array.from({ length: 4 }, () => null);
+
+  return (
+    <section id="inaugurated" className="py-[100px] px-7 border-t"
+      style={{ background: "#0a0908", borderColor: "rgba(200,163,90,0.10)" }}>
+      <div className="max-w-[1280px] mx-auto">
+        <div className="text-center mb-16">
+          <div className="inline-block text-[11px] tracking-[0.46em] uppercase text-[#c8a35a] mb-6">— Recently Inaugurated —</div>
+          <h2 className="font-display italic font-normal text-[clamp(40px,5.8vw,72px)] leading-[1.05] tracking-[-0.015em]"
+            style={{ textWrap: "balance" as any }}>
+            Now on the wall.
+          </h2>
+          <p className="mt-5 text-[13px] tracking-[0.04em] text-[#8a8068] italic">
+            Live museums minted under artid.eth.
+          </p>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-[18px]">
+          {tiles.map((m, i) => (
+            <InauguralTile key={m ? m.label : `skel-${i}`} item={m} index={i} />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function InauguralTile({ item, index }: { item: Inaugural | null; index: number }) {
+  if (!item) {
+    return (
+      <div className="relative overflow-hidden bg-[#100e0c] border border-[rgba(200,163,90,0.10)]"
+        style={{ aspectRatio: "4 / 5" }}>
+        <div className="absolute inset-0 flex items-center justify-center font-display italic text-[#5a5141] text-sm">
+          curating…
+        </div>
+      </div>
+    );
+  }
+  const href = `https://${item.label}.artid.eth.link`;
+  return (
+    <motion.a href={href} target="_blank" rel="noreferrer"
+      initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+      transition={{ duration: 0.7, delay: index * 0.04, ease: [0.2, 0.7, 0.2, 1] }}
+      className="group relative overflow-hidden cursor-pointer block bg-[#100e0c] border border-[rgba(200,163,90,0.18)]"
+      style={{ aspectRatio: "4 / 5" }}
+    >
+      {item.image ? (
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img src={item.image} alt={item.name ?? item.label}
+          className="w-full h-full object-cover transition-[transform,filter] duration-[900ms] group-hover:scale-[1.05]"
+          style={{ filter: "saturate(0.9) contrast(1.02)" }} />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center text-[#5a5141] font-display italic">no image</div>
+      )}
+      <div className="absolute inset-0 opacity-100 transition-opacity duration-500"
+        style={{ background: "linear-gradient(180deg, transparent 55%, rgba(5,5,5,0.92) 100%)" }} />
+      <div aria-hidden className="pointer-events-none absolute inset-0 transition-shadow duration-500 group-hover:shadow-[inset_0_0_0_1px_rgba(200,163,90,0.5),0_0_60px_rgba(200,163,90,0.22)]" />
+      <div className="absolute left-[18px] right-[18px] bottom-[16px]">
+        <div className="font-display italic text-[16px] text-[#ece4d2] tracking-[-0.005em] truncate">
+          {item.label}<span className="text-[#a89e85]">.artid.eth</span>
+        </div>
+        {item.name && (
+          <div className="text-[10px] tracking-[0.28em] uppercase text-[#c8a35a] truncate mt-1">{item.name}</div>
+        )}
+      </div>
+    </motion.a>
+  );
+}
+
+
+/* ════════════════════════════════════════════════════════════════
    TRENDING — Cosmos.so-style gallery wall
    ════════════════════════════════════════════════════════════════ */
 
 function Trending() {
   const [nfts, setNfts] = useState<TrendingNft[]>([]);
   useEffect(() => {
-    fetch("/api/trending").then(r => r.json()).then(d => setNfts(d.nfts || [])).catch(() => {});
+    import("@/lib/opensea").then(m => m.fetchTrendingFrames()).then(setNfts).catch(() => {});
   }, []);
 
-  // Empty state is meaningful — see brief.
   const tiles = nfts.length ? nfts.slice(0, 8) : Array.from({ length: 8 }, () => null);
 
   return (
@@ -396,10 +515,10 @@ function Trending() {
       style={{ background: "linear-gradient(180deg, #0a0908 0%, #100e0c 100%)", borderColor: "rgba(200,163,90,0.10)" }}>
       <div className="max-w-[1280px] mx-auto">
         <div className="text-center mb-20">
-          <div className="inline-block text-[11px] tracking-[0.46em] uppercase text-[#c8a35a] mb-6">— Recently Inaugurated —</div>
+          <div className="inline-block text-[11px] tracking-[0.46em] uppercase text-[#c8a35a] mb-6">— Awaiting Acquisition —</div>
           <h2 className="font-display italic font-normal text-[clamp(40px,5.8vw,72px)] leading-[1.05] tracking-[-0.015em]"
             style={{ textWrap: "balance" as any }}>
-            Now on the wall.
+            Blue-chip pieces, ready for the wall.
           </h2>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-[18px]">

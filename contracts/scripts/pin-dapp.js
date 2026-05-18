@@ -44,10 +44,14 @@ async function main() {
   const form = new FormData();
   for (const f of files) {
     const buf = await fs.readFile(f.full);
-    form.append("file", new Blob([buf], { type: ctypeOf(f.rel) }), `dapp/${f.rel}`);
+    // Pinata requires a single top-level directory when uploading many files.
+    // The returned CID is THIS directory itself (not a wrapper around it),
+    // so files appear at the CID root and ENS serves index.html directly.
+    form.append("file", new Blob([buf], { type: ctypeOf(f.rel) }), `artid/${f.rel}`);
   }
   form.append("pinataMetadata", JSON.stringify({ name: "artid-dapp", keyvalues: { kind: "dapp" } }));
-  form.append("pinataOptions", JSON.stringify({ wrapWithDirectory: true, cidVersion: 1 }));
+  // Do NOT wrap — the `artid/` prefix is itself the directory we want as the CID root.
+  form.append("pinataOptions", JSON.stringify({ wrapWithDirectory: false, cidVersion: 1 }));
 
   const r = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
     method: "POST",

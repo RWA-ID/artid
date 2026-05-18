@@ -1,0 +1,41 @@
+{
+  "name": "@artidv1/react",
+  "version": "0.1.0",
+  "description": "React components for the ArtID museum-passport widget.",
+  "license": "MIT",
+  "homepage": "https://artid.eth.link",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RWA-ID/artid"
+  },
+  "keywords": ["artid", "ens", "nft", "react", "widget"],
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": ["dist", "README.md", "LICENSE"],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup",
+    "prepublishOnly": "npm run build"
+  },
+  "peerDependencies": {
+    "react": ">=17"
+  },
+  "dependencies": {
+    "@artidv1/widget": "^0.1.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "react": "^18.3.1",
+    "tsup": "^8.3.5",
+    "typescript": "^5.6.3"
+  }
+}

@@ -19,8 +19,10 @@ export async function pinSiteFolder(
     form.append("file", new Blob([content], { type: ct }), `${name}/${filename}`);
   }
   form.append("pinataMetadata", JSON.stringify({ name, keyvalues: { kind: "museum" } }));
-  // cidVersion 1 → bafy…
-  form.append("pinataOptions", JSON.stringify({ wrapWithDirectory: true, cidVersion: 1 }));
+  // wrapWithDirectory:false + the `${name}/` prefix above means the CID IS the
+  // museum directory itself (so visiting the CID resolves index.html directly,
+  // not a directory listing of a single subfolder). cidVersion 1 → bafy…
+  form.append("pinataOptions", JSON.stringify({ wrapWithDirectory: false, cidVersion: 1 }));
 
   const r = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
     method: "POST",

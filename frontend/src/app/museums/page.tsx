@@ -3,7 +3,9 @@ import { useAccount, usePublicClient, useReadContract, useWriteContract, useWait
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { formatEther } from "viem";
+import { mainnet } from "wagmi/chains";
 import { REGISTRAR_ADDRESS, REGISTRAR_ABI } from "@/lib/contracts";
+import { fetchRegisteredByOwner } from "@/lib/registry-events";
 import { useEthUsd, formatEthAndUsd } from "@/lib/useEthUsd";
 
 type Museum = { label: string; node: `0x${string}`; nftContract: string; tokenId: bigint };
@@ -12,9 +14,10 @@ const DONATE_OPTIONS = [1, 2, 5, 10] as const;
 
 export default function Museums() {
   const { address, isConnected } = useAccount();
-  const client = usePublicClient();
+  const client = usePublicClient({ chainId: mainnet.id });
   const [items, setItems] = useState<Museum[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadErr, setLoadErr] = useState<string | null>(null);
   const ethUsd = useEthUsd();
 
   const { data: parentExpiry } = useReadContract({
@@ -25,22 +28,28 @@ export default function Museums() {
   });
 
   useEffect(() => {
-    if (!client || !address) return;
+    if (!address) return;
+    let cancelled = false;
     setLoading(true);
+    setLoadErr(null);
     (async () => {
-      const logs = await client.getContractEvents({
-        address: REGISTRAR_ADDRESS, abi: REGISTRAR_ABI, eventName: "Registered",
-        args: { owner: address }, fromBlock: "earliest",
-      });
-      setItems(logs.map((l: any) => ({
-        label: l.args.label as string,
-        node: l.args.node as `0x${string}`,
-        nftContract: l.args.nftContract as string,
-        tokenId: l.args.tokenId as bigint,
-      })));
-      setLoading(false);
+      try {
+        const events = await fetchRegisteredByOwner(address);
+        if (cancelled) return;
+        setItems(events.map(e => ({
+          label: e.label,
+          node: e.node,
+          nftContract: e.nftContract,
+          tokenId: e.tokenId,
+        })));
+      } catch (e: any) {
+        if (!cancelled) setLoadErr(e?.message || "RPC error");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     })();
-  }, [client, address]);
+    return () => { cancelled = true; };
+  }, [address]);
 
   if (!isConnected) {
     return (
@@ -75,6 +84,14 @@ export default function Museums() {
         <p className="text-[11px] tracking-[0.32em] uppercase text-[#6a6151] mb-6">Your passports</p>
 
         {loading && <p className="text-[11px] tracking-[0.32em] uppercase text-[#6a6151] italic">Reading on-chain history…</p>}
+        {loadErr && !loading && (
+          <div className="text-[12px] text-red-400/80 border border-red-500/30 bg-red-500/5 p-3 mb-4">
+            Couldn't read on-chain history — {loadErr}. Refresh to retry.
+          </div>
+        )}
+        {!loading && !loadErr && items.length === 0 && (
+          <p className="text-[12px] text-[#6a6151] italic">No passports yet — mint one from the gallery.</p>
+        )}
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {items.map((m) => (
