@@ -1,7 +1,7 @@
 import { WagmiAdapter } from "@reown/appkit-adapter-wagmi";
 import { mainnet, sepolia } from "@reown/appkit/networks";
 
-const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "00000000000000000000000000000000";
+const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "43bdd1b8c477ac4d4a4264a14a8472f8";
 export const networks = [mainnet, sepolia];
 
 const MAINNET_RPC = process.env.NEXT_PUBLIC_RPC_URL_MAINNET;
