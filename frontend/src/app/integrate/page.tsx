@@ -99,8 +99,8 @@ export default function Integrate() {
 
   if (!isConnected) {
     return (
-      <div className="max-w-2xl mx-auto px-7 py-32 text-center">
-        <p className="text-[11px] tracking-[0.42em] uppercase text-[#c8a35a]/70">— For collection owners —</p>
+      <div className="max-w-2xl mx-auto px-6 sm:px-7 py-24 sm:py-32 text-center">
+        <p className="text-[10px] sm:text-[11px] tracking-[0.32em] sm:tracking-[0.42em] uppercase text-[#c8a35a]/70">— For collection owners —</p>
         <h1 className="font-display italic font-light text-[clamp(48px,6vw,72px)] leading-[1.05] text-[#ece4d2] mt-6">
           Connect the wallet that controls your collection.
         </h1>
@@ -139,8 +139,8 @@ export default function Integrate() {
   return (
     <div className="relative bg-[#0a0908] text-[#ece4d2] min-h-screen">
       {/* ── Hero ─────────────────────────────────────────────── */}
-      <section className="max-w-[1200px] mx-auto px-7 pt-20 pb-10">
-        <p className="text-[11px] tracking-[0.42em] uppercase text-[#c8a35a]/70">— For collection owners —</p>
+      <section className="max-w-[1200px] mx-auto px-6 sm:px-7 pt-14 sm:pt-20 pb-10">
+        <p className="text-[10px] sm:text-[11px] tracking-[0.32em] sm:tracking-[0.42em] uppercase text-[#c8a35a]/70">— For collection owners —</p>
         <h1 className="font-display font-normal text-[clamp(48px,6vw,80px)] leading-[0.98] tracking-[-0.025em] mt-5">
           Earn from every <span className="italic font-light text-[#d8b977]">museum</span><br />
           minted under your collection.
@@ -154,7 +154,7 @@ export default function Integrate() {
       </section>
 
       {/* ── How it works ─────────────────────────────────────── */}
-      <section className="max-w-[1200px] mx-auto px-7 pb-4">
+      <section className="max-w-[1200px] mx-auto px-6 sm:px-7 pb-4">
         <p className="text-[11px] tracking-[0.32em] uppercase text-[#6a6151] mb-8">How it works</p>
         <div className="grid md:grid-cols-3 gap-[18px]">
           <PrimerCard
@@ -185,7 +185,7 @@ export default function Integrate() {
       </section>
 
       {/* ── Step 1 ───────────────────────────────────────────── */}
-      <section className="max-w-[1200px] mx-auto px-7 pt-16">
+      <section className="max-w-[1200px] mx-auto px-6 sm:px-7 pt-16">
         <Step n="1" eyebrow="The contract you control" title="Verify ownership">
           <div className="mt-6 relative">
             <input
@@ -237,7 +237,7 @@ export default function Integrate() {
 
       {/* ── Step 2 ───────────────────────────────────────────── */}
       {verified === "ok" && (
-        <section className="max-w-[1200px] mx-auto px-7 pt-14">
+        <section className="max-w-[1200px] mx-auto px-6 sm:px-7 pt-14">
           <Step n="2" eyebrow="Where the artist fee lands" title="Payout terms">
             <div className="mt-6 grid md:grid-cols-2 gap-5">
               <Field label="Artist treasury" hint="Defaults to your wallet">
@@ -294,7 +294,7 @@ export default function Integrate() {
 
       {/* ── Step 3 ───────────────────────────────────────────── */}
       {existingActive && (
-        <section className="max-w-[1200px] mx-auto px-7 pt-14 pb-32">
+        <section className="max-w-[1200px] mx-auto px-6 sm:px-7 pt-14 pb-24 sm:pb-32">
           <Step n="3" eyebrow="Drop into your collection's site" title="Embed the widget">
             <div className="mt-6 inline-flex border-b border-[rgba(200,163,90,0.18)]">
               <TabBtn active={tab === "html"} onClick={() => setTab("html")}>HTML</TabBtn>
@@ -339,9 +339,9 @@ function PrimerCard({ n, title, body }: { n: string; title: string; body: React.
 function Step({ n, eyebrow, title, children }: { n: string; eyebrow: string; title: string; children: React.ReactNode }) {
   return (
     <div>
-      <div className="flex items-baseline gap-5 mb-2">
+      <div className="flex items-baseline gap-4 sm:gap-5 mb-2">
         <span className="font-display italic text-[#c8a35a]/70 text-[28px] leading-none">{n}.</span>
-        <p className="text-[11px] tracking-[0.42em] uppercase text-[#c8a35a]/70">— {eyebrow} —</p>
+        <p className="text-[10px] sm:text-[11px] tracking-[0.26em] sm:tracking-[0.42em] uppercase text-[#c8a35a]/70">— {eyebrow} —</p>
       </div>
       <h2 className="font-display font-normal text-[clamp(32px,4vw,48px)] leading-[1.05] tracking-[-0.02em] text-[#ece4d2]">{title}</h2>
       {children}

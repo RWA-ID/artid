@@ -87,7 +87,6 @@ export default function Home() {
       <Audiences />
       <RecentlyInaugurated />
       <Trending />
-      <Footer />
     </div>
   );
 }
@@ -107,10 +106,10 @@ function Hero({ reduced }: { reduced: boolean }) {
     <section className="relative isolate overflow-hidden"
       style={{ background:
         "radial-gradient(ellipse 80% 60% at 50% 0%, rgba(200,163,90,0.10) 0%, transparent 60%), radial-gradient(ellipse at 50% 100%, #16130f 0%, #0a0908 70%)" }}>
-      <div className="max-w-[1200px] mx-auto px-7 pt-[120px] pb-[140px] grid lg:grid-cols-[1.05fr_0.95fr] gap-20 items-center">
+      <div className="max-w-[1200px] mx-auto px-6 sm:px-7 pt-[80px] sm:pt-[120px] pb-[96px] sm:pb-[140px] grid lg:grid-cols-[1.05fr_0.95fr] gap-12 lg:gap-20 items-center">
         <div>
           <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1, delay: 0.2 }}
-            className="font-display italic text-[#c8a35a] text-[13px] tracking-[0.42em] uppercase mb-8">
+            className="font-display italic text-[#c8a35a] text-[11px] sm:text-[13px] tracking-[0.28em] sm:tracking-[0.42em] uppercase mb-8">
             — A Private Museum for Every Masterpiece —
           </motion.div>
 
@@ -243,7 +242,7 @@ function Manifesto({ reduced }: { reduced: boolean }) {
   const full = [...phrases, ...phrases]; // duplicate for seamless loop
 
   return (
-    <section aria-label="Manifesto" className="relative py-[100px] overflow-hidden isolate"
+    <section aria-label="Manifesto" className="relative py-[72px] sm:py-[100px] overflow-hidden isolate"
       style={{ background: "linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.4) 50%, transparent 100%), #100e0c" }}>
       {/* Gold rule top */}
       <div aria-hidden className="absolute top-0 left-0 right-0 h-px opacity-50"
@@ -274,7 +273,7 @@ function Manifesto({ reduced }: { reduced: boolean }) {
           ))}
         </div>
       </div>
-      <div className="text-center mt-14 text-[11px] tracking-[0.42em] uppercase text-[#6a6151]">
+      <div className="text-center mt-12 sm:mt-14 px-6 text-[10px] sm:text-[11px] tracking-[0.28em] sm:tracking-[0.42em] uppercase text-[#6a6151]">
         — the case for a real address on chain —
       </div>
     </section>
@@ -294,9 +293,9 @@ function Process() {
   ];
 
   return (
-    <section id="process" className="max-w-[1200px] mx-auto px-7 py-[140px]">
-      <div className="text-center mb-20">
-        <div className="inline-block text-[11px] tracking-[0.46em] uppercase text-[#c8a35a] mb-6">— Three rooms, one ceremony —</div>
+    <section id="process" className="max-w-[1200px] mx-auto px-6 sm:px-7 py-[88px] sm:py-[140px]">
+      <div className="text-center mb-14 sm:mb-20">
+        <div className="inline-block text-[10px] sm:text-[11px] tracking-[0.3em] sm:tracking-[0.46em] uppercase text-[#c8a35a] mb-6">— Three rooms, one ceremony —</div>
         <h2 className="font-display italic font-normal text-[clamp(40px,5.8vw,72px)] leading-[1.05] tracking-[-0.015em]"
           style={{ textWrap: "balance" as any }}>
           How a passport is made.
@@ -353,13 +352,13 @@ function Audiences() {
   ];
 
   return (
-    <section id="audiences" className="max-w-[1200px] mx-auto px-7 pt-14 pb-[120px] grid md:grid-cols-2 gap-px border"
+    <section id="audiences" className="max-w-[1200px] mx-auto px-6 sm:px-7 pt-14 pb-[96px] sm:pb-[120px] grid md:grid-cols-2 gap-px border"
       style={{ background: "rgba(200,163,90,0.18)", borderColor: "rgba(200,163,90,0.18)" }}>
       {items.map((it, i) => (
         <motion.div key={i}
           initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
           transition={{ duration: 0.9, delay: i * 0.1 }}
-          className="relative px-14 py-16 bg-[#0a0908] hover:bg-[#100e0c] transition-colors duration-500"
+          className="relative px-7 sm:px-14 py-12 sm:py-16 bg-[#0a0908] hover:bg-[#100e0c] transition-colors duration-500"
         >
           <span className="block text-[10px] tracking-[0.4em] uppercase text-[#c8a35a] mb-7">{it.eyebrow}</span>
           <h3 className="font-display italic font-normal text-[44px] leading-[1.05] text-[#ece4d2] mb-6 tracking-[-0.015em]"
@@ -432,11 +431,11 @@ function RecentlyInaugurated() {
     : Array.from({ length: 4 }, () => null);
 
   return (
-    <section id="inaugurated" className="py-[100px] px-7 border-t"
+    <section id="inaugurated" className="py-[72px] sm:py-[100px] px-6 sm:px-7 border-t"
       style={{ background: "#0a0908", borderColor: "rgba(200,163,90,0.10)" }}>
       <div className="max-w-[1280px] mx-auto">
         <div className="text-center mb-16">
-          <div className="inline-block text-[11px] tracking-[0.46em] uppercase text-[#c8a35a] mb-6">— Recently Inaugurated —</div>
+          <div className="inline-block text-[10px] sm:text-[11px] tracking-[0.3em] sm:tracking-[0.46em] uppercase text-[#c8a35a] mb-6">— Recently Inaugurated —</div>
           <h2 className="font-display italic font-normal text-[clamp(40px,5.8vw,72px)] leading-[1.05] tracking-[-0.015em]"
             style={{ textWrap: "balance" as any }}>
             Now on the wall.
@@ -511,11 +510,11 @@ function Trending() {
   const tiles = nfts.length ? nfts.slice(0, 8) : Array.from({ length: 8 }, () => null);
 
   return (
-    <section id="trending" className="py-[100px] px-7 pb-[140px] border-t"
+    <section id="trending" className="py-[72px] sm:py-[100px] px-6 sm:px-7 pb-[96px] sm:pb-[140px] border-t"
       style={{ background: "linear-gradient(180deg, #0a0908 0%, #100e0c 100%)", borderColor: "rgba(200,163,90,0.10)" }}>
       <div className="max-w-[1280px] mx-auto">
         <div className="text-center mb-20">
-          <div className="inline-block text-[11px] tracking-[0.46em] uppercase text-[#c8a35a] mb-6">— Awaiting Acquisition —</div>
+          <div className="inline-block text-[10px] sm:text-[11px] tracking-[0.3em] sm:tracking-[0.46em] uppercase text-[#c8a35a] mb-6">— Awaiting Acquisition —</div>
           <h2 className="font-display italic font-normal text-[clamp(40px,5.8vw,72px)] leading-[1.05] tracking-[-0.015em]"
             style={{ textWrap: "balance" as any }}>
             Blue-chip pieces, ready for the wall.
@@ -564,28 +563,5 @@ function Tile({ nft, index }: { nft: TrendingNft | null; index: number }) {
         <div className="text-[10px] tracking-[0.28em] uppercase text-[#c8a35a] truncate">{nft.collection}</div>
       </div>
     </motion.a>
-  );
-}
-
-
-/* ════════════════════════════════════════════════════════════════
-   FOOTER
-   ════════════════════════════════════════════════════════════════ */
-
-function Footer() {
-  return (
-    <footer className="border-t px-7 py-14 pb-10" style={{ background: "#050505", borderColor: "rgba(200,163,90,0.18)" }}>
-      <div className="max-w-[1200px] mx-auto flex flex-wrap justify-between items-end gap-6">
-        <div>
-          <div className="font-display text-2xl tracking-[0.4em] text-[#c8a35a]">ArtID</div>
-          <div className="mt-2 text-[11px] tracking-[0.32em] uppercase text-[#6a6151]">
-            artid.eth · ethereum mainnet · 2026
-          </div>
-        </div>
-        <div className="text-[11px] tracking-[0.32em] uppercase text-[#6a6151]">
-          ENS · IPFS · No middlemen
-        </div>
-      </div>
-    </footer>
   );
 }

@@ -38,12 +38,12 @@ export default function Dashboard() {
 
   return (
     <div className="relative bg-[#0a0908] text-[#ece4d2] min-h-screen">
-      <section className="max-w-[1200px] mx-auto px-7 pt-20 pb-8">
-        <p className="text-[11px] tracking-[0.42em] uppercase text-[#c8a35a]/70">— Your acquisitions —</p>
+      <section className="max-w-[1200px] mx-auto px-6 sm:px-7 pt-14 sm:pt-20 pb-8">
+        <p className="text-[10px] sm:text-[11px] tracking-[0.32em] sm:tracking-[0.42em] uppercase text-[#c8a35a]/70">— Your acquisitions —</p>
         <h1 className="font-display font-normal text-[clamp(48px,6vw,80px)] leading-[0.98] tracking-[-0.025em] mt-5">
           <span>The </span><span className="italic font-light text-[#d8b977]">collection</span>
         </h1>
-        <div className="mt-6 flex items-center gap-5 text-[10px] tracking-[0.32em] uppercase text-[#6a6151]">
+        <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-[10px] tracking-[0.32em] uppercase text-[#6a6151]">
           <span>Ethereum mainnet</span>
           <span className="w-px h-3 bg-[#3a342c]" />
           <span className="font-mono normal-case tracking-normal text-[12px] text-[#8a8068]">
@@ -60,7 +60,7 @@ export default function Dashboard() {
         />
       </section>
 
-      <section className="max-w-[1200px] mx-auto px-7 pb-32">
+      <section className="max-w-[1200px] mx-auto px-6 sm:px-7 pb-24 sm:pb-32">
         {loading && (
           <p className="text-[11px] tracking-[0.32em] uppercase text-[#6a6151] italic mt-12">
             Curating from OpenSea…
@@ -81,7 +81,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        <div className="mt-12 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-7 gap-y-14">
+        <div className="mt-12 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 sm:gap-x-7 gap-y-10 sm:gap-y-14">
           {nfts.map((n, i) => (
             <NftCard key={`${n.contract}-${n.identifier}`} nft={n} index={i} />
           ))}

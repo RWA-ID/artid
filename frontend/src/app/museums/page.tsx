@@ -65,8 +65,8 @@ export default function Museums() {
 
   return (
     <div className="relative bg-[#0a0908] text-[#ece4d2] min-h-screen">
-      <section className="max-w-[1200px] mx-auto px-7 pt-20 pb-8">
-        <p className="text-[11px] tracking-[0.42em] uppercase text-[#c8a35a]/70">— The shared gallery —</p>
+      <section className="max-w-[1200px] mx-auto px-6 sm:px-7 pt-14 sm:pt-20 pb-8">
+        <p className="text-[10px] sm:text-[11px] tracking-[0.32em] sm:tracking-[0.42em] uppercase text-[#c8a35a]/70">— The shared gallery —</p>
         <h1 className="font-display font-normal text-[clamp(48px,6vw,80px)] leading-[0.98] tracking-[-0.025em] mt-5">
           The <span className="italic font-light text-[#d8b977]">museums</span> you've minted.
         </h1>
@@ -80,7 +80,7 @@ export default function Museums() {
       {/* Shared expiry card */}
       {expiryDate && <SharedExpiryCard expiry={expiryDate} daysLeft={daysLeft} totalSubnames={Number(totalSubnames ?? 0n)} ethUsd={ethUsd} />}
 
-      <section className="max-w-[1200px] mx-auto px-7 pb-32 mt-16">
+      <section className="max-w-[1200px] mx-auto px-6 sm:px-7 pb-24 sm:pb-32 mt-12 sm:mt-16">
         <p className="text-[11px] tracking-[0.32em] uppercase text-[#6a6151] mb-6">Your passports</p>
 
         {loading && <p className="text-[11px] tracking-[0.32em] uppercase text-[#6a6151] italic">Reading on-chain history…</p>}
@@ -140,8 +140,8 @@ function SharedExpiryCard({ expiry, daysLeft, totalSubnames, ethUsd }: { expiry:
   }
 
   return (
-    <section className="max-w-[1200px] mx-auto px-7 mt-8">
-      <div className="border border-[rgba(200,163,90,0.22)] p-8 bg-gradient-to-b from-[#16130f] to-[#0a0908]">
+    <section className="max-w-[1200px] mx-auto px-6 sm:px-7 mt-8">
+      <div className="border border-[rgba(200,163,90,0.22)] p-6 sm:p-8 bg-gradient-to-b from-[#16130f] to-[#0a0908]">
         <div className="grid lg:grid-cols-[1fr_auto] gap-8 items-end">
           <div>
             <p className="text-[10px] tracking-[0.32em] uppercase text-[#6a6151]">The gallery is open through</p>
@@ -153,7 +153,7 @@ function SharedExpiryCard({ expiry, daysLeft, totalSubnames, ethUsd }: { expiry:
             </p>
           </div>
 
-          <div className="flex flex-col gap-3 min-w-[260px]">
+          <div className="flex flex-col gap-3 w-full lg:min-w-[260px]">
             <div className="text-[10px] tracking-[0.32em] uppercase text-[#6a6151]">Donate to push it forward</div>
             <div className="grid grid-cols-4 gap-1.5">
               {DONATE_OPTIONS.map(y => (

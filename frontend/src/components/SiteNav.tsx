@@ -105,6 +105,7 @@ function ConnectChipInner() {
 
 export function SiteNav() {
   const [embedded, setEmbedded] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   useEffect(() => {
     try {
       const sp = new URLSearchParams(window.location.search);
@@ -114,11 +115,13 @@ export function SiteNav() {
   if (embedded) return null;
   return (
     <nav className="border-b border-[rgba(200,163,90,0.08)] bg-[#0a0908]/90 backdrop-blur sticky top-0 z-40">
-      <div className="max-w-[1200px] mx-auto px-7 py-5 flex items-center justify-between">
+      <div className="max-w-[1200px] mx-auto px-6 sm:px-7 py-4 sm:py-5 flex items-center justify-between">
         <Link href="/" className="font-display italic text-[22px] tracking-[-0.01em] text-[#d8b977]">
           ArtID
         </Link>
-        <div className="flex items-center gap-8 text-[11px] tracking-[0.3em] uppercase">
+
+        {/* Desktop links */}
+        <div className="hidden md:flex items-center gap-8 text-[11px] tracking-[0.3em] uppercase">
           <Link href="/dashboard" className="text-[#b8aa8e] hover:text-[#d8b977] transition">Gallery</Link>
           <Link href="/museums" className="text-[#b8aa8e] hover:text-[#d8b977] transition">Museums</Link>
           <Link href="/integrate" className="text-[#b8aa8e] hover:text-[#d8b977] transition">Artists</Link>
@@ -131,7 +134,41 @@ export function SiteNav() {
           </button>
           <ConnectChip />
         </div>
+
+        {/* Mobile: connect chip + hamburger */}
+        <div className="flex md:hidden items-center gap-3">
+          <ConnectChip />
+          <button
+            onClick={() => setMenuOpen(o => !o)}
+            aria-label="Menu"
+            aria-expanded={menuOpen}
+            className="inline-flex items-center justify-center w-10 h-10 border border-[rgba(200,163,90,0.25)] text-[#c8a35a] hover:border-[#c8a35a] transition"
+          >
+            <svg viewBox="0 0 18 18" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.4">
+              {menuOpen
+                ? <path d="M4 4l10 10M14 4L4 14" strokeLinecap="round" />
+                : <><path d="M2 5h14" strokeLinecap="round" /><path d="M2 9h14" strokeLinecap="round" /><path d="M2 13h14" strokeLinecap="round" /></>}
+            </svg>
+          </button>
+        </div>
       </div>
+
+      {/* Mobile dropdown */}
+      {menuOpen && (
+        <div className="md:hidden border-t border-[rgba(200,163,90,0.08)] bg-[#0a0908]/95 backdrop-blur">
+          <div className="px-6 py-3 flex flex-col text-[12px] tracking-[0.3em] uppercase">
+            <Link href="/dashboard" onClick={() => setMenuOpen(false)} className="py-3.5 text-[#b8aa8e] hover:text-[#d8b977] transition border-b border-[rgba(200,163,90,0.06)]">Gallery</Link>
+            <Link href="/museums" onClick={() => setMenuOpen(false)} className="py-3.5 text-[#b8aa8e] hover:text-[#d8b977] transition border-b border-[rgba(200,163,90,0.06)]">Museums</Link>
+            <Link href="/integrate" onClick={() => setMenuOpen(false)} className="py-3.5 text-[#b8aa8e] hover:text-[#d8b977] transition border-b border-[rgba(200,163,90,0.06)]">Artists</Link>
+            <button
+              onClick={() => { setMenuOpen(false); hardReset(); }}
+              className="py-3.5 text-left text-[10px] text-[#5a5141] hover:text-red-400/80 tracking-[0.32em]"
+            >
+              Reset wallet session
+            </button>
+          </div>
+        </div>
+      )}
     </nav>
   );
 }

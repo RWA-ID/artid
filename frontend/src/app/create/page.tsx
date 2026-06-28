@@ -234,10 +234,10 @@ function CreatePage() {
     : null;
 
   return (
-    <div className="max-w-6xl mx-auto px-6 py-12 grid lg:grid-cols-[1fr_1.1fr] gap-14">
+    <div className="max-w-6xl mx-auto px-5 sm:px-6 py-10 sm:py-12 grid lg:grid-cols-[1fr_1.1fr] gap-10 lg:gap-14">
       <div>
         <p className="text-[11px] tracking-[0.42em] uppercase text-[#c8a35a]/70">— Selected work —</p>
-        <h1 className="font-display text-5xl gilded-text mt-3 leading-tight">{nft.name || `#${tokenId}`}</h1>
+        <h1 className="font-display text-4xl sm:text-5xl gilded-text mt-3 leading-tight break-words">{nft.name || `#${tokenId}`}</h1>
         <p className="text-sm text-[#8a8068] mt-2 italic">{nft.collection || "—"}</p>
 
         <div className="mt-8 border border-[rgba(200,163,90,0.18)] p-6">
